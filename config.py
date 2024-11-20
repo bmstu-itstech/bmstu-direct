@@ -17,12 +17,16 @@ class TgBot:
     token: str
     admin_ids: list[int]
 
+@dataclass
+class ModChannel:
+    chat_id: str
+
 
 @dataclass
 class Config:
     tg_bot: TgBot
     db: DbConfig
-
+    channel: ModChannel
 
 def cast_bool(value: str) -> bool:
     if not value:
@@ -45,6 +49,9 @@ def load_config():
             address=os.getenv("db_address"),
             user=os.getenv("db_user"),
         ),
+        channel=ModChannel(
+            chat_id=os.getenv("chat1_id")
+        )
     )
 
 
