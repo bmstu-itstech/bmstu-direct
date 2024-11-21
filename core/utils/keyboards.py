@@ -21,7 +21,7 @@ get_type_of_statement_keyboard - функция для вызова клавиа
 '''
 def get_type_of_statement_keyboard() -> types.ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    keyboard.add(KeyboardButton(text='Вопросы'),
+    keyboard.add(KeyboardButton(text='Вопрос'),
                  KeyboardButton(text='Проблема'),
                  KeyboardButton(text='Предложение'),
                  KeyboardButton(text='Назад'))
@@ -32,7 +32,7 @@ get_category_of_statement_keyboard - Функция для вызова инла
 обращения, каждая инлайн кнопка со своим запросом
 '''
 def get_category_of_statement_keyboard() -> types.ReplyKeyboardMarkup:
-    keyboard = ReplyKeyboardMarkup(row_width=2)
+    keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     keyboard.add(KeyboardButton(text='Учёба'),
                  KeyboardButton(text='Общежитие'),
                  KeyboardButton(text='Питание'),
@@ -48,14 +48,8 @@ def get_category_of_statement_keyboard() -> types.ReplyKeyboardMarkup:
     return keyboard
 
 def get_anonim_keyboard() -> types.ReplyKeyboardMarkup:
-    keyboard = ReplyKeyboardMarkup(row_width=2)
-    keyboard.add(KeyboardButton(text='Да (Анонимно)'),
-                 KeyboardButton(text='Нет (Не анонимно)'))
-                 # InlineKeyboardButton(text='Отмена', callback_data='cancel'))
+    keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    keyboard.add(KeyboardButton(text='Да'),
+                 KeyboardButton(text='Нет'),
+                 KeyboardButton(text='Назад'))
     return keyboard
-
-#
-# def get_start_button() -> types.ReplyKeyboardMarkup:
-#     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-#     keyboard.add(KeyboardButton(text='Начать заново'))
-#     return keyboard

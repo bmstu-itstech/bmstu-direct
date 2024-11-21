@@ -3,8 +3,7 @@ import logging
 from aiogram import Dispatcher, Bot
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
-from aiogram.types import CallbackQuery, Message
-
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from core.states.Example import registration
 from core.utils.keyboards import *
@@ -17,7 +16,9 @@ config = load_config()
 
 bot = Bot(config.tg_bot.token)
 dp = Dispatcher(bot=bot)
-channel_1 = config.channel.chat_id
+channel_1 = config.channel.chat_id1 # чат для вопросов
+channel_2 = config.channel.chat_id2 # чат для проблем
+channel_3 = config.channel.chat_id3 # чат для предложений
 
 async def start(message: Message, repo: Repo, state: FSMContext):
     # use repo object to iteract with DB
@@ -26,21 +27,6 @@ async def start(message: Message, repo: Repo, state: FSMContext):
                          "Для подачи заявления нажми кнопку ниже",
                          reply_markup=get_first_statement_button()
                          )
-
-def register_user(dp: Dispatcher):
-    dp.register_message_handler(start, commands=["start"], state="*")
-    # dp.register_message_handler(start, state=registration.end)
-
-
-'''
-async def cancel_button(callback_query: CallbackQuery, state: FSMContext):
-    await state.finish()
-    await callback_query.answer(text='Вы вернулись на начальный этап ')
-    return choice_start_statement
-def process_cancel(dp: Dispatcher):
-    dp.register_message_handler(cancel_button, commands=['cancel'])
-    # dp.register_callback_query_handler(choice_start_statement)
-'''
 
 async def choice_start_statement(callback_query: CallbackQuery): # обработчик кнопки Подать заявление
     await registration.type.set()
@@ -88,11 +74,11 @@ async def choice_is_anonim(message: Message, state: FSMContext):
     await message.answer(text= f'Вы выбрали {message.text}')
     if message.text == 'Да':
         await registration.text_statement.set()
-        await message.answer(text='Введите текст обращения: ')
+        await message.answer(text='Введите текст обращения: ', reply_markup=ReplyKeyboardRemove())
         await registration.text_statement.set()
     else:
         await registration.fio.set()
-        await message.answer(text='Введите ваше Фио: ')
+        await message.answer(text='Введите ваше Фио: ', reply_markup=ReplyKeyboardRemove())
         await registration.fio.set()
 
 
@@ -125,25 +111,24 @@ async def input_text(message: Message, state: FSMContext):
                                               f'{all_data}')
     await message.answer(text='Для создания нового заявление, нажмите кнопку "Начать заново"',
                          )
-    await bot.send_message(chat_id=channel_1, text= all_data )
+    if data['type'] == 'Вопрос':
+        await bot.send_message(chat_id=channel_1, text= all_data )
+    elif data['type'] == 'Проблема':
+        await bot.send_message(chat_id=channel_2, text= all_data )
+    elif data['type'] == 'Предложение':
+        await bot.send_message(chat_id=channel_3, text= all_data )
     await state.finish()
 
 
 
-def process_choice(dp: Dispatcher): # стартовый обработчик
-        dp.register_message_handler(choice_start_statement)
-def process_choice_type(dp: Dispatcher):
-    dp.register_message_handler(choice_type_statement,state=registration.type)
-def process_category(dp: Dispatcher):
+def register_user_handlers(dp: Dispatcher):
+    dp.register_message_handler(start, commands=["start"], state="*")
+    dp.register_message_handler(start, Text(equals='Назад'), state='*')
+    dp.register_message_handler(choice_start_statement, Text(equals='Подать заявление'))
+    dp.register_message_handler(choice_type_statement,  state=registration.type)
     dp.register_message_handler(choice_is_category, state=registration.category)
-def process_anonim(dp: Dispatcher):
     dp.register_message_handler(choice_is_anonim, state=registration.is_anonim)
-
-def process_fio(dp: Dispatcher):
     dp.register_message_handler(input_fio, state=registration.fio)
-def process_study_group(dp: Dispatcher):
     dp.register_message_handler(input_study_group, state=registration.study_group)
-def process_text_statement(dp: Dispatcher):
     dp.register_message_handler(input_text, state=registration.text_statement)
-def  process_end(dp: Dispatcher):
-    dp.register_message_handler(start, Text(equals='Начать заново'), state='*')
+
