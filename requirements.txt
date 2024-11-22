@@ -3,3 +3,4 @@ APScheduler==3.10.4
 asyncpg==0.30.0
 SQLAlchemy==2.0.32
 python-dotenv==1.0.1
+regex==2024.11.6

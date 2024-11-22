@@ -15,10 +15,10 @@ class RoleMiddleware(LifetimeControllerMiddleware):
             data["role"] = None
             return
 
-        data["role"] = UserRole.USER
+        data["role"] = UserRole.User
 
         if obj.from_user.id in self.owner_ids:
-            data["role"] = UserRole.OWNER
+            data["role"] = UserRole.Admin
 
     async def post_process(self, obj, data, *args):
         del data["role"]

@@ -16,6 +16,12 @@ class DbConfig:
 class TgBot:
     token: str
     admin_ids: list[int]
+    problem_channel: int
+    question_channel: int
+    suggest_channel: int
+    problem_chat: int
+    question_chat: int
+    suggest_chat: int
 
 
 @dataclass
@@ -38,7 +44,16 @@ def load_config():
         tg_bot=TgBot(
             token=os.getenv("bot_token"),
             admin_ids=list(map(int, os.getenv("bot_admin_ids").split(", "))),
-        ),
+
+            problem_channel=int(os.getenv("problem_channel_id")),
+            question_channel=int(os.getenv("question_channel_id")),
+            suggest_channel=int(os.getenv("suggest_channel_id")),
+
+            problem_chat=int(os.getenv("problem_chat_id")),
+            question_chat=int(os.getenv("question_chat_id")),
+            suggest_chat=int(os.getenv("suggest_chat_id"))
+
+    ),
         db=DbConfig(
             name=os.getenv("db_name"),
             password=os.getenv("db_password"),

@@ -1,6 +1,6 @@
-import datetime
-
-from aiogram.dispatcher.handler import CancelHandler
+# import datetime
+#
+# from aiogram.dispatcher.handler import CancelHandler
 from aiogram.dispatcher.middlewares import LifetimeControllerMiddleware
 
 from config import load_config
@@ -23,7 +23,8 @@ class UserControlMiddleware(LifetimeControllerMiddleware):
             return
 
         repo: Repo = data["repo"]
-        # todo: add user if it does not exist in DB
+        tg_user_id: int = obj.this_user.id
+        await repo.add_user(tg_user_id=tg_user_id)
 
     async def post_process(self, obj, data, *args):
         del data["repo"]

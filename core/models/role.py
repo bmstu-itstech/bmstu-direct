@@ -2,5 +2,7 @@ from enum import IntEnum
 
 
 class UserRole(IntEnum):
-    USER = 0
-    OWNER = 1
+    Blocked = -1
+    User = 0
+    Moderator = 1
+    Admin = 2
