@@ -6,12 +6,12 @@ from aiogram.dispatcher.filters import Text
 from aiogram.types import Message
 # from sqlalchemy.util import await_fallback
 
-from core.models.ticket import TicketType
+from core.models.enums import TicketType
 from services.db.services.repository import Repo
 from config import load_config
-from core.text import btn
-from core import states, text
-from core.utils.variables import bot, channel_ids
+from core.text import text
+from core.states.ticket_states import Ticket
+from core.utils.variables import bot
 from core.utils import funcs, keyboards
 
 
@@ -21,103 +21,157 @@ config = load_config()
 
 
 async def start(msg: Message, repo: Repo, state: FSMContext):
-    # use repo object to interact with DB
-
+    logger.info('handled start')
 
     await state.finish()
-    await msg.answer("Привет!", reply_markup= await keyboards.main_kb())
-
-    logger.info((channel_ids.question_channel, channel_ids.question_chat))
-
-    mes = await bot.send_message(chat_id=channel_ids.question_channel, text='qwerty')
-
-    logger.info(mes)
-    mes_id = mes.message_id
-    mes_link = funcs.message_link(channel_ids.question_channel, mes_id)
-
-    logger.info(mes_id)
-
-    await mes.reply(text=f'asdf {mes_id}')
-    await bot.send_message(channel_ids.question_chat, 'a')
-    await bot.send_message(channel_ids.question_chat, f'asd {mes_id}',
-                           reply_to_message_id=mes_id)
+    is_any_to_edit = await repo.get_opened_tickets_by_user(msg.from_user.id)
+    has_opened = True if is_any_to_edit else False
+    await msg.answer("Привет!", reply_markup= await keyboards.main_kb(has_opened))
 
 
 async def create_ticket(msg: Message, state: FSMContext):
-    await msg.reply(text.ticket.ask_type,
+    logger.info('handled create')
+
+
+    await msg.reply(text.TicketText.ask_type,
                     reply_markup=await keyboards.type_select_kb())
 
-    await state.set_state(states.ticket.Ticket.tg_user_id)
+    await state.set_state(Ticket.group)
     await state.update_data(tg_user_id=msg.from_user.id)
-    await state.set_state(states.ticket.Ticket.type)
+    await state.set_state(Ticket.type)
 
 
-async def ticket_type(msg: Message,repo: Repo, state: FSMContext):
-    if msg.text == text.btn.problem:
-        await state.update_data(ticket_type=TicketType.Problem)
-    elif msg.text == text.btn.question:
-        await state.update_data(ticket_type=TicketType.Question)
-    elif msg.text == text.btn.suggest:
-        await state.update_data(ticket_type=TicketType.Suggest)
+async def my_tickets(msg: Message, state: FSMContext):
+    await state.finish()
+    await msg.reply(text.Error.no_func, reply_markup=await keyboards.main_kb())
+    raise NotImplemented
+
+
+async def ticket_type(msg: Message, repo: Repo, state: FSMContext):
+    logger.info('handled type')
+
+    if msg.text == text.Btn.problem:
+        await state.update_data(type=TicketType.Problem)
+    elif msg.text == text.Btn.question:
+        await state.update_data(type=TicketType.Question)
+    elif msg.text == text.Btn.suggest:
+        await state.update_data(type=TicketType.Suggest)
     else:
-        await msg.reply(text.errors.undefined_behaviour,
+        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        await msg.reply(text.Error.undefined_behaviour,
                         reply_markup=await keyboards.type_select_kb())
         return
 
-    await state.set_state(states.ticket.Ticket.category)
-    await msg.reply(text.ticket.ask_category,
-              reply_markup=await keyboards.categories_select_kb(repo=repo))
+    await state.set_state(Ticket.category)
+    kb = await keyboards.categories_select_kb(repo=repo)
+    logger.info(kb)
+    await msg.reply(text.TicketText.ask_category,
+              reply_markup=kb)
 
 
 async def ticket_category(msg: Message, repo: Repo, state: FSMContext):
-    if msg.text in repo.unique_categories():
+    logger.info('handled cat')
+    cats = await repo.unique_categories()
+    if msg.text in cats:
         await state.update_data(category=msg.text)
-        await msg.reply(text.ticket.ask_anonim,
+        await msg.reply(text.TicketText.ask_anonim,
                         reply_markup=await keyboards.yes_no_keyboard())
-        await state.set_state(states.ticket.Ticket.is_anonim)
+        await state.set_state(Ticket.is_anonim)
     else:
-        await msg.reply(text.errors.undefined_behaviour)
+        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        await msg.reply(text.Error.undefined_behaviour)
 
 
-async def ticket_anonim(msg: Message, repo: Repo, state: FSMContext):
-    pass
+async def ticket_anonim(msg: Message, state: FSMContext):
+    logger.info('handled anon')
+    if msg.text == text.Btn.yes:
+        await state.update_data(is_anonim=True)
+        await state.set_state(Ticket.text)
+        await msg.reply(text.TicketText.ask_text)
+        logger.info(f'tg_us_id: {msg.from_user.id} pinned ticket as anonim')
+    elif msg.text == text.Btn.no:
+        await state.update_data(is_anonim=False)
+        await state.set_state(Ticket.name)
+        await msg.reply(text.TicketText.ask_name,
+                        reply_markup=await keyboards.back_kb())
+    else:
+        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        await msg.reply(text.Error.undefined_behaviour,
+                        reply_markup=await keyboards.yes_no_keyboard())
 
 
-async def ticket_name(msg: Message, repo: Repo, state: FSMContext):
-    pass
+async def ticket_name(msg: Message, state: FSMContext):
+    logger.info('handled name')
+    if await funcs.validate_name(msg.text):
+        await state.update_data(name=msg.text)
+        await state.set_state(Ticket.group)
+        await msg.reply(text.TicketText.ask_group)
+    else:
+        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        await msg.reply(text.Error.undefined_behaviour,
+                        reply_markup=await keyboards.back_kb())
 
 
-async def ticket_group(msg: Message, repo: Repo, state: FSMContext):
-    pass
+async def ticket_group(msg: Message, state: FSMContext):
+    logger.info('handled group')
+    if await funcs.validate_group(msg.text):
+        await state.update_data(group=msg.text)
+        await state.set_state(Ticket.text)
+        await msg.reply(text.TicketText.ask_text)
+    else:
+        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        await msg.reply(text.Error.undefined_behaviour,
+                        reply_markup=await keyboards.back_kb())
 
 
 async def ticket_text(msg: Message, repo: Repo, state: FSMContext):
+    logger.info('handled text')
     await state.update_data(text=msg.text)
     data = await state.get_data()
     await state.finish()
+    await send_ticket(repo, data)
+    await msg.reply(text.TicketText.successful_sent, reply_markup=await keyboards.main_kb())
 
-    # await repo.add_ticket(data["tg_user_id"])
+
+async def send_ticket(repo: Repo, data: dict):
+    chan_id = await funcs.choose_ch_id(data)
+    msg = await bot.send_message(chan_id, text.make_ticket_text(data))
+    msg_link = await funcs.message_link(chan_id, msg.message_id)
+    await funcs.add_ticket(data, msg_link, repo)
+    logger.info(f"user {data['tg_user_id']} sent ticket url: {msg_link}")
 
 
-async def help(msg: Message, state: FSMContext):
+async def help_handler(msg: Message, state: FSMContext):
+    logger.info('handled help')
+
     await state.finish()
-    await msg.reply(text.ticket.hello_message,
+    await msg.reply(text.TicketText.hello_message,
                     reply_markup=await keyboards.main_kb())
 
 
 async def back(msg: Message, state: FSMContext):
-    pass
+    logger.info('handled back')
+
+    await state.finish()
+    await msg.reply(text.TicketText.hello_message,
+                    reply_markup=await keyboards.main_kb())
 
 
 def register_user(dp: Dispatcher):
-    dp.register_message_handler(start, commands=["start"], state="*")
-    dp.register_message_handler(create_ticket, Text(equals=btn.open_ticket), commands=['/create_ticket'])
-    dp.register_message_handler(ticket_type, state=states.ticket.Ticket.type)
-    dp.register_message_handler(ticket_category, state=states.ticket.Ticket.category)
-    dp.register_message_handler(ticket_anonim, state=states.ticket.Ticket.is_anonim)
-    dp.register_message_handler(ticket_name, state=states.ticket.Ticket.name)
-    dp.register_message_handler(ticket_group, state=states.ticket.Ticket.group)
-    dp.register_message_handler(ticket_text, state=states.ticket.Ticket.text)
-    dp.register_message_handler(help, Text(equals=btn.help), commands=["help"])
-    # dp.register_message_handler()
+    dp.register_message_handler(start, commands=["start"], state='*')
+    dp.register_message_handler(create_ticket, commands=["create_ticket"])
+    dp.register_message_handler(back, Text(text.Btn.back), state='*')
+    dp.register_message_handler(back, commands=['back'], state='*')
+    dp.register_message_handler(create_ticket, Text(text.Btn.make_ticket))
+    dp.register_message_handler(my_tickets,Text(text.Btn.my_tickets))
+
+    dp.register_message_handler(ticket_type, state=Ticket.type)
+    dp.register_message_handler(ticket_category, state=Ticket.category)
+    dp.register_message_handler(ticket_anonim, state=Ticket.is_anonim)
+    dp.register_message_handler(ticket_name, state=Ticket.name)
+    dp.register_message_handler(ticket_group, state=Ticket.group)
+    dp.register_message_handler(ticket_text, state=Ticket.text)
+    dp.register_message_handler(help_handler, commands=["help"])
+    dp.register_message_handler(help_handler, Text(text.Btn.help))
+
 

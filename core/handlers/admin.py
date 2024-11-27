@@ -6,7 +6,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import Message
 
 # from services.db.models import Users
-from core.models.role import UserRole
+from core.models.enums import UserRole
 from core.utils import keyboards
 # from services.db.services.repository import Repo
 

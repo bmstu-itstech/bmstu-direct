@@ -1,6 +1,6 @@
 from aiogram.dispatcher.middlewares import LifetimeControllerMiddleware
 
-from core.models.role import UserRole
+from core.models.enums import UserRole
 
 
 class RoleMiddleware(LifetimeControllerMiddleware):

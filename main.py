@@ -6,6 +6,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from services.db.services.repository import Repo
 
 from config import load_config
 from core.filters.role import RoleFilter, AdminFilter
@@ -24,6 +26,9 @@ logger = logging.getLogger(__name__)
 async def set_commands(bot: Bot):
     commands = [
         BotCommand(command="/start", description="Открыть меню"),
+        BotCommand(command='/create_ticket', description='Создать обращение'),
+        BotCommand(command='/back', description='Отменить действие'),
+        BotCommand(command='/help', description='Помощь')
     ]
     await bot.set_my_commands(commands)
 
@@ -77,5 +82,6 @@ async def main():
 if __name__ == "__main__":
     try:
         asyncio.run(main())
+
     except (KeyboardInterrupt, SystemExit):
         logger.error("Bot stopped!")

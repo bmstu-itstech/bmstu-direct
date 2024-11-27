@@ -4,7 +4,7 @@ from aiogram.dispatcher.filters import BoundFilter
 from aiogram.dispatcher.handler import ctx_data
 from aiogram.types.base import TelegramObject
 
-from core.models.role import UserRole
+from core.models.enums import UserRole
 
 
 class RoleFilter(BoundFilter):

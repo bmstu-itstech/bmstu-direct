@@ -2,8 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, BigInteger, Integer, DateTime, Text, Enum, Null, Boolean
 
-from core.models.role import UserRole
-from core.models.ticket import TicketType
+from core.models.enums import UserRole, TicketType
 from services.db.base import Base
 
 
@@ -18,8 +17,8 @@ class Users(BaseCommon):
     __tablename__ = "users"
 
     tg_user_id = Column(BigInteger, primary_key=True)
-    name = Column(Text, nullable=True, default=Null)
-    group = Column(Text, nullable=True, default=Null)
+    name = Column(Text, nullable=True, default="Null")
+    group = Column(Text, nullable=True, default="Null")
     role = Column(Enum(UserRole))
 
 
@@ -33,6 +32,8 @@ class Tickets(BaseCommon):
     ticket_type = Column(Enum(TicketType))
     is_anonim = Column(Boolean, default=True, nullable=False)
     is_closed = Column(Boolean, default=False, nullable=False)
+    name = Column(Text, nullable=True, default="Null")
+    group = Column(Text, nullable=True, default="Null")
 
 
 class Category(BaseCommon):
