@@ -108,7 +108,7 @@ async def ticket_name(msg: Message, state: FSMContext):
         await msg.reply(text.TicketText.ask_group)
     else:
         logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.Error.undefined_behaviour,
+        await msg.reply(text.TicketText.retry_ask_name,
                         reply_markup=await keyboards.back_kb())
 
 
@@ -120,7 +120,7 @@ async def ticket_group(msg: Message, state: FSMContext):
         await msg.reply(text.TicketText.ask_text)
     else:
         logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.Error.undefined_behaviour,
+        await msg.reply(text.TicketText.retry_ask_group,
                         reply_markup=await keyboards.back_kb())
 
 

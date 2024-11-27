@@ -43,7 +43,7 @@ async def type_select_kb():
         [[Buttons.problem],
                   [Buttons.question],
                   [Buttons.suggest],
-                  [Buttons.back]], one_time_keyboard=True)
+                  [Buttons.back]], one_time_keyboard=True, resize_keyboard=True)
 
 
 async def categories_select_kb(repo: Repo) -> ReplyKeyboardMarkup:
@@ -56,7 +56,7 @@ async def categories_select_kb(repo: Repo) -> ReplyKeyboardMarkup:
             base.append([KeyboardButton(cats[i])])
 
     base.append([Buttons.back])
-    return ReplyKeyboardMarkup(base)
+    return ReplyKeyboardMarkup(base, resize_keyboard=True)
 
 
 async def yes_no_keyboard():
