@@ -5,18 +5,18 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
-from core.states.Example import registration
+from core.states.Ticket_States import registration
 from core.utils.keyboards import *
 from services.db.services.repository import Repo
 from config import load_config
 
-from sqlalchemy.types import Boolean
 
 logger = logging.getLogger(__name__)
 config = load_config()
 
 bot = Bot(config.tg_bot.token)
 dp = Dispatcher(bot=bot)
+
 channel_1 = config.channel.chat_id1 # чат для вопросов
 channel_2 = config.channel.chat_id2 # чат для проблем
 channel_3 = config.channel.chat_id3 # чат для предложений
@@ -37,6 +37,10 @@ async def choice_start_statement(callback_query: CallbackQuery): # обрабо�
                                 reply_markup=get_type_of_statement_keyboard())
 
 
+"""
+Функция для состояние (выбор типа заявления), от этого выбора зависит 
+в какой канал будет отправлен тикет к модератору.
+"""
 async def choice_type_statement(message: Message, state: FSMContext):
     async with state.proxy() as data: # запоминаем тип заявления
         data['type'] = message.text
@@ -46,7 +50,10 @@ async def choice_type_statement(message: Message, state: FSMContext):
     await registration.next() # переходим к состоянию category
 
 
-
+"""
+Функция для состояние (выбора категории), пока что сделана заглушка 
+для категорий "Военная кафедра" и "Поступление"
+"""
 async def choice_is_category(message: Message, state: FSMContext):
     async with state.proxy() as data:
         data['category'] = message.text
@@ -67,8 +74,10 @@ async def choice_is_category(message: Message, state: FSMContext):
                                         reply_markup=get_anonim_keyboard())
     await registration.next()
 
-
-
+"""
+Функция для состояние (выбора анонимно ли подается заявление). В зависимости от этого выбора в дальнейшем будет меняться
+маршрут состояний.
+"""
 async def choice_is_anonim(message: Message, state: FSMContext):
     async with state.proxy() as data:
         data['is_anonim'] = message.text
@@ -83,7 +92,10 @@ async def choice_is_anonim(message: Message, state: FSMContext):
         await message.answer(text='Введите ваше Фио: ', reply_markup=ReplyKeyboardRemove())
         await registration.fio.set()
 
-
+"""
+Функция для состояние (ввод Имени\Фио), пока что без валидности (проверки на правильность ввода)
+В дальнейшем добавим.
+"""
 async def input_fio(message: Message, state: FSMContext):
     async with state.proxy() as data:
         data['fio'] = message.text
@@ -92,7 +104,10 @@ async def input_fio(message: Message, state: FSMContext):
     await message.answer(text='Введите учебную группу')
     await registration.next()
 
-
+"""
+Функция для состояние (ввод учебной группы), пока что без валидности (проверки на правильность ввода)
+В дальнейшем добавим.
+"""
 async def input_study_group(message:  Message, state: FSMContext):
     async with state.proxy() as data:
         data['study_group'] = message.text
@@ -101,7 +116,10 @@ async def input_study_group(message:  Message, state: FSMContext):
     await message.answer(text='Введите текст обращения')
     await registration.text_statement.set()
 
-
+"""
+функция для последнего (на данный момент) состояния пользователя, ожидание ввода текста заявления.
+В дальнейшем будет добавлено состояние, ожидание ответа от модератора.
+"""
 async def input_text(message: Message, state: FSMContext, repo: Repo):
     async with state.proxy() as data:
         data['text_statement'] = message.text
@@ -109,42 +127,37 @@ async def input_text(message: Message, state: FSMContext, repo: Repo):
     await message.answer(text=f'Вы ввели {message.text}')
     user_data = await state.get_data()
     all_data = '\n'.join([f"{key}: {value}" for key, value in user_data.items()])
+    # Пока тестовый вывод данные поданного заявления пользователю в чат
     await message.answer(text= f'Ваши данные из фсм:\n'
                                               f'{all_data}')
     await message.answer(text='Для создания нового заявление, нажмите кнопку "Начать заново"',
                          reply_markup=get_first_statement_button())
 
-    uslovie = await repo.get_user_by_telegram_id(message.from_user.id)
-    if uslovie is None:
-        if data['is_anonim'] == 'Да':
-            await repo.update_user(tg_id=message.from_user.id, name='0', group='0')
-            await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
-                                  text=data['text_statement'], type=data['type'], category=data['category'],
-                                  is_anonim=data['is_anonim'], is_closed='False')
-        elif data['is_anonim'] == 'Нет':
-            await repo.update_user(tg_id=message.from_user.id, name=data['fio'], group=data['study_group'])
-            await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
-                                  text=data['text_statement'], type=data['type'], category=data['category'],
-                                  is_anonim=data['is_anonim'], is_closed='False')
-    else:
-        if data['is_anonim'] == 'Да':
-            await repo.update_user(tg_id=message.from_user.id, name='0', group='0')
-            await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
-                                  text=data['text_statement'], type=data['type'], category=data['category'],
-                                  is_anonim=data['is_anonim'], is_closed='False')
-        elif data['is_anonim'] == 'Нет':
-            await repo.update_user(tg_id=message.from_user.id, name=data['fio'], group=data['study_group'])
-            await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
-                                  text=data['text_statement'], type=data['type'], category=data['category'],
-                                  is_anonim=data['is_anonim'], is_closed='False')
+
+    if data['is_anonim'] == 'Да':
+        await repo.update_user(tg_id=message.from_user.id, name='0', group='0')
+        await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
+                              text=data['text_statement'], type=data['type'], category=data['category'],
+                              is_anonim=data['is_anonim'], is_closed='False')
+    elif data['is_anonim'] == 'Нет':
+        await repo.update_user(tg_id=message.from_user.id, name=data['fio'], group=data['study_group'])
+        await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
+                              text=data['text_statement'], type=data['type'], category=data['category'],
+                              is_anonim=data['is_anonim'], is_closed='False')
 
 
     if data['type'] == 'Вопрос':
-        await bot.send_message(chat_id=channel_1, text= all_data )
+        await bot.send_message(chat_id=channel_1, text= f'Новое заявление!\n'
+                                                        f'Его данные из фсм:\n'
+                                                        f'{all_data}' )
     elif data['type'] == 'Проблема':
-        await bot.send_message(chat_id=channel_2, text= all_data )
+        await bot.send_message(chat_id=channel_2, text= f'Новое заявление!\n'
+                                                        f'Его данные из фсм:\n'
+                                                        f'{all_data}'  )
     elif data['type'] == 'Предложение':
-        await bot.send_message(chat_id=channel_3, text= all_data )
+        await bot.send_message(chat_id=channel_3, text= f'Новое заявление!\n'
+                                                        f'Его данные из фсм:\n'
+                                                        f'{all_data}'  )
 
     await state.finish()
 

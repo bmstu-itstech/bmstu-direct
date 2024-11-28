@@ -16,6 +16,9 @@ class BaseCommon(Base):
     updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     pass
 
+"""
+Енамы пока что нигде не используются, сделано на будущее.
+"""
 class Enum_types(enum.Enum):
     QUESTIONS = 'questions'
     PROBLEMS = 'problems'
