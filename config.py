@@ -19,9 +19,9 @@ class TgBot:
 
 @dataclass
 class ModChannel:
-    chat_id1: str
-    chat_id2: str
-    chat_id3: str
+    questions_chat_id: str
+    problems_chat_id: str
+    suggestions_chat_id: str
 
 @dataclass
 class Config:
@@ -51,9 +51,9 @@ def load_config():
             user=os.getenv("db_user"),
         ),
         channel=ModChannel(
-            chat_id1=os.getenv("chat1_id"),
-            chat_id2=os.getenv("chat2_id"),
-            chat_id3=os.getenv("chat3_id")
+            questions_chat_id=os.getenv("questions_chat_id"),
+            problems_chat_id=os.getenv("problems_chat_id"),
+            suggestions_chat_id=os.getenv("suggestions_chat_id")
         )
     )
 

@@ -110,3 +110,4 @@ class Repo:
             logger.info(f'add new information in user with id {tg_id=}')
         else:
             logger.info(f'for add new information, user with id {tg_id=} not found')
+

@@ -1,6 +1,6 @@
 from aiogram import types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
-
+from core.text.text import btn
 
 def get_admin_keyboard() -> types.InlineKeyboardMarkup:
     raise NotImplemented
@@ -10,7 +10,7 @@ get_first_statement_button - функция для вызова кнопки п�
 '''
 def get_first_statement_button() -> types.ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(row_width=1, resize_keyboard=True)
-    keyboard.add(KeyboardButton(text='Подать заявление'))
+    keyboard.add(KeyboardButton(btn.make_ticket))
     return keyboard
 
 '''
@@ -21,10 +21,10 @@ get_type_of_statement_keyboard - функция для вызова клавиа
 '''
 def get_type_of_statement_keyboard() -> types.ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    keyboard.add(KeyboardButton(text='Вопрос'),
-                 KeyboardButton(text='Проблема'),
-                 KeyboardButton(text='Предложение'),
-                 KeyboardButton(text='Назад'))
+    keyboard.add(KeyboardButton(btn.question),
+                 KeyboardButton(btn.problem),
+                 KeyboardButton(btn.suggestion),
+                 KeyboardButton(btn.back))
     return keyboard
 
 '''
@@ -33,23 +33,23 @@ get_category_of_statement_keyboard - Функция для вызова инла
 '''
 def get_category_of_statement_keyboard() -> types.ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
-    keyboard.add(KeyboardButton(text='Учёба'),
-                 KeyboardButton(text='Общежитие'),
-                 KeyboardButton(text='Питание'),
-                 KeyboardButton(text='Медицина'),
-                 KeyboardButton(text='Военная кафедра'),
-                 KeyboardButton(text='Поступление'),
-                 KeyboardButton(text='Документы'),
-                 KeyboardButton(text='Стипендия и соц.выплаты'),
-                 KeyboardButton(text='Внеучебная деятельность'),
-                 KeyboardButton(text='Другое'),
-                 KeyboardButton(text='Назад'),
+    keyboard.add(KeyboardButton(btn.study),
+                 KeyboardButton(btn.hostel),
+                 KeyboardButton(btn.food),
+                 KeyboardButton(btn.medicine),
+                 KeyboardButton(btn.army),
+                 KeyboardButton(btn.army),
+                 KeyboardButton(btn.documents),
+                 KeyboardButton(btn.money),
+                 KeyboardButton(btn.electives),
+                 KeyboardButton(btn.other),
+                 KeyboardButton(btn.back),
                  )
     return keyboard
 
 def get_anonim_keyboard() -> types.ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
-    keyboard.add(KeyboardButton(text='Да'),
-                 KeyboardButton(text='Нет'),
-                 KeyboardButton(text='Назад'))
+    keyboard.add(KeyboardButton(btn.yes),
+                 KeyboardButton(btn.no),
+                 KeyboardButton(btn.back))
     return keyboard

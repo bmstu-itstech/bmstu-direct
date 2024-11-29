@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from config import load_config
 from core.filters.role import RoleFilter, AdminFilter
 from core.handlers.admin import register_admin
-from core.handlers.user import (register_user_handlers)
+from core.handlers.user import register_user_handlers
 from core.middlewares.db import DbMiddleware
 from core.middlewares.role import RoleMiddleware
 from core.middlewares.user_control import UserControlMiddleware
@@ -82,3 +82,4 @@ if __name__ == "__main__":
         executor.start_polling(Dispatcher, skip_updates=True)
     except (KeyboardInterrupt, SystemExit):
         logger.error("Bot stopped!")
+

@@ -10,3 +10,4 @@ class registration(StatesGroup):
     study_group = State() # ввод учебной группы
     text_statement = State() # ввод текста обращения
     end = State()
+

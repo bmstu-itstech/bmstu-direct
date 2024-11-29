@@ -17,9 +17,9 @@ config = load_config()
 bot = Bot(config.tg_bot.token)
 dp = Dispatcher(bot=bot)
 
-channel_1 = config.channel.chat_id1 # чат для вопросов
-channel_2 = config.channel.chat_id2 # чат для проблем
-channel_3 = config.channel.chat_id3 # чат для предложений
+questions_chat = config.channel.questions_chat_id # чат для вопросов
+problems_chat = config.channel.problems_chat_id # чат для проблем
+suggestions_chat = config.channel.suggestions_chat_id # чат для предложений
 
 async def start(message: Message, repo: Repo, state: FSMContext):
     # use repo object to iteract with DB
@@ -59,15 +59,17 @@ async def choice_is_category(message: Message, state: FSMContext):
         data['category'] = message.text
 
     await message.answer(text= f'Вы выбрали категорию {message.text}')
-    if message.text == 'Военная кафедра':
+    if message.text == btn.army:
         await message.answer(text='https://aiogram-birdi7.readthedocs.io/en/latest/examples/media_group.html\n'
                                                  'Вот ссылка на сайт вуц\n'
-                                                 'Для подачи нового заявления нажмите кнопку "Начать заново"')
+                                                 'Для подачи нового заявления нажмите кнопку "Начать заново"',
+                             reply_markup=get_first_statement_button())
         await state.finish()
-    elif message.text == 'Поступление':
+    elif message.text == btn.entry:
         await message.answer(text='https://bmstu.ru/\n'
-                                                 'Вот ссылка на сайт приемной комисси\n'
-                                                 'Для подачи нового заявления нажмите кнопку "Начать заново"')
+                                                 'Вот ссылка на сайт приемной комиссии\n'
+                                                 'Для подачи нового заявления нажмите кнопку "Начать заново"',
+                             reply_markup=get_first_statement_button())
         await state.finish()
     else:
         await message.answer(text='Выберите как вы хотите задать вопрос(анонимно или нет)',
@@ -83,7 +85,7 @@ async def choice_is_anonim(message: Message, state: FSMContext):
         data['is_anonim'] = message.text
 
     await message.answer(text= f'Вы выбрали {message.text}')
-    if message.text == 'Да':
+    if message.text == btn.yes:
         await registration.text_statement.set()
         await message.answer(text='Введите текст обращения: ', reply_markup=ReplyKeyboardRemove())
         await registration.text_statement.set()
@@ -134,28 +136,28 @@ async def input_text(message: Message, state: FSMContext, repo: Repo):
                          reply_markup=get_first_statement_button())
 
 
-    if data['is_anonim'] == 'Да':
+    if data['is_anonim'] == btn.yes:
         await repo.update_user(tg_id=message.from_user.id, name='0', group='0')
         await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
                               text=data['text_statement'], type=data['type'], category=data['category'],
                               is_anonim=data['is_anonim'], is_closed='False')
-    elif data['is_anonim'] == 'Нет':
+    elif data['is_anonim'] == btn.no:
         await repo.update_user(tg_id=message.from_user.id, name=data['fio'], group=data['study_group'])
         await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
                               text=data['text_statement'], type=data['type'], category=data['category'],
                               is_anonim=data['is_anonim'], is_closed='False')
 
 
-    if data['type'] == 'Вопрос':
-        await bot.send_message(chat_id=channel_1, text= f'Новое заявление!\n'
+    if data['type'] == btn.question:
+        await bot.send_message(chat_id=questions_chat, text= f'Новое заявление!\n'
                                                         f'Его данные из фсм:\n'
                                                         f'{all_data}' )
-    elif data['type'] == 'Проблема':
-        await bot.send_message(chat_id=channel_2, text= f'Новое заявление!\n'
+    elif data['type'] == btn.problem:
+        await bot.send_message(chat_id=problems_chat, text= f'Новое заявление!\n'
                                                         f'Его данные из фсм:\n'
                                                         f'{all_data}'  )
-    elif data['type'] == 'Предложение':
-        await bot.send_message(chat_id=channel_3, text= f'Новое заявление!\n'
+    elif data['type'] == btn.suggestion:
+        await bot.send_message(chat_id=suggestions_chat, text= f'Новое заявление!\n'
                                                         f'Его данные из фсм:\n'
                                                         f'{all_data}'  )
 

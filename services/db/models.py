@@ -17,14 +17,14 @@ class BaseCommon(Base):
     pass
 
 """
-Енамы пока что нигде не используются, сделано на будущее.
+Енамы пока что нигде не используются, сделано на будущее. )))))
 """
-class Enum_types(enum.Enum):
+class IssueTypes(str, Enum):
     QUESTIONS = 'questions'
     PROBLEMS = 'problems'
     SUGGESTIONS = 'suggestions'
 
-class Enum_category(enum.Enum):
+class IssueCategory(str, Enum):
     STUDY = 'food'
     HOSTEL = 'hostel'
     FOOD = 'food'
@@ -56,3 +56,4 @@ class Ticket(BaseCommon):
     category = Column(Text, nullable=False)
     is_anonim = Column(Text, default=1, nullable=False)
     is_closed = Column(Text, default=0, nullable=False)
+
