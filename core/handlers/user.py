@@ -21,6 +21,13 @@ questions_chat = config.channel.questions_chat_id # чат для вопросо
 problems_chat = config.channel.problems_chat_id # чат для проблем
 suggestions_chat = config.channel.suggestions_chat_id # чат для предложений
 
+DATA_TYPE_KEY = 'type'
+DATA_CATEGORY_KEY = 'category'
+DATA_ANONIM_KEY = 'is_anonim'
+DATA_FIO_KEY = 'fio'
+DATA_STUDY_GROUP_KEY = 'study_group'
+DATA_TEXT_KEY = 'text_statement'
+
 async def start(message: Message, repo: Repo, state: FSMContext):
     # use repo object to iteract with DB
     # await repo.add_user(message.from_user.id)
@@ -43,7 +50,7 @@ async def choice_start_statement(callback_query: CallbackQuery): # обрабо�
 """
 async def choice_type_statement(message: Message, state: FSMContext):
     async with state.proxy() as data: # запоминаем тип заявления
-        data['type'] = message.text
+        data[DATA_TYPE_KEY] = message.text
     await message.answer(text=f'Вы выбрали тип заявления: {message.text}')
     await message.answer(text='Далее выберите категорию заявления: ',
                                         reply_markup=get_category_of_statement_keyboard())
@@ -56,7 +63,7 @@ async def choice_type_statement(message: Message, state: FSMContext):
 """
 async def choice_is_category(message: Message, state: FSMContext):
     async with state.proxy() as data:
-        data['category'] = message.text
+        data[DATA_CATEGORY_KEY] = message.text
 
     await message.answer(text= f'Вы выбрали категорию {message.text}')
     if message.text == btn.army:
@@ -82,7 +89,7 @@ async def choice_is_category(message: Message, state: FSMContext):
 """
 async def choice_is_anonim(message: Message, state: FSMContext):
     async with state.proxy() as data:
-        data['is_anonim'] = message.text
+        data[DATA_ANONIM_KEY] = message.text
 
     await message.answer(text= f'Вы выбрали {message.text}')
     if message.text == btn.yes:
@@ -100,7 +107,7 @@ async def choice_is_anonim(message: Message, state: FSMContext):
 """
 async def input_fio(message: Message, state: FSMContext):
     async with state.proxy() as data:
-        data['fio'] = message.text
+        data[DATA_FIO_KEY] = message.text
 
     await message.answer(text=f'Ваше фио: {message.text}')
     await message.answer(text='Введите учебную группу')
@@ -112,7 +119,7 @@ async def input_fio(message: Message, state: FSMContext):
 """
 async def input_study_group(message:  Message, state: FSMContext):
     async with state.proxy() as data:
-        data['study_group'] = message.text
+        data[DATA_STUDY_GROUP_KEY] = message.text
 
     await message.answer(text=f'Ваша учебная группа: {message.text}')
     await message.answer(text='Введите текст обращения')
@@ -124,7 +131,7 @@ async def input_study_group(message:  Message, state: FSMContext):
 """
 async def input_text(message: Message, state: FSMContext, repo: Repo):
     async with state.proxy() as data:
-        data['text_statement'] = message.text
+        data[DATA_TEXT_KEY] = message.text
 
     await message.answer(text=f'Вы ввели {message.text}')
     user_data = await state.get_data()
@@ -136,27 +143,27 @@ async def input_text(message: Message, state: FSMContext, repo: Repo):
                          reply_markup=get_first_statement_button())
 
 
-    if data['is_anonim'] == btn.yes:
+    if data[DATA_ANONIM_KEY] == btn.yes:
         await repo.update_user(tg_id=message.from_user.id, name='0', group='0')
         await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
                               text=data['text_statement'], type=data['type'], category=data['category'],
                               is_anonim=data['is_anonim'], is_closed='False')
-    elif data['is_anonim'] == btn.no:
+    elif data[DATA_ANONIM_KEY] == btn.no:
         await repo.update_user(tg_id=message.from_user.id, name=data['fio'], group=data['study_group'])
         await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
                               text=data['text_statement'], type=data['type'], category=data['category'],
                               is_anonim=data['is_anonim'], is_closed='False')
 
 
-    if data['type'] == btn.question:
+    if data[DATA_TYPE_KEY] == btn.question:
         await bot.send_message(chat_id=questions_chat, text= f'Новое заявление!\n'
                                                         f'Его данные из фсм:\n'
                                                         f'{all_data}' )
-    elif data['type'] == btn.problem:
+    elif data[DATA_TYPE_KEY] == btn.problem:
         await bot.send_message(chat_id=problems_chat, text= f'Новое заявление!\n'
                                                         f'Его данные из фсм:\n'
                                                         f'{all_data}'  )
-    elif data['type'] == btn.suggestion:
+    elif data[DATA_TYPE_KEY] == btn.suggestion:
         await bot.send_message(chat_id=suggestions_chat, text= f'Новое заявление!\n'
                                                         f'Его данные из фсм:\n'
                                                         f'{all_data}'  )
