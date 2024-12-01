@@ -1,4 +1,4 @@
-class btn:
+class Btn:
     back = 'Назад'
     make_ticket = 'Подать заявление'
     help = 'Помощь'
@@ -10,7 +10,7 @@ class btn:
 
     # category btn
     study = 'Учёба'
-    hostel = 'Общежитие' # хи-хи-хи
+    hostel = 'Общежитие'
     food = 'Питание'
     medicine = 'Медицина'
     army = 'Военная кафедра'
@@ -19,3 +19,4 @@ class btn:
     money = 'Стипендия и соц.выплаты'
     electives = 'Внеучебная деятельность'
     other = 'Другое'
+

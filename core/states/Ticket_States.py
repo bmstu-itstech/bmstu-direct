@@ -1,7 +1,7 @@
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 
-class registration(StatesGroup):
+class Registration(StatesGroup):
     start = State() # стартовое состояние
     type = State()  # Вопрос\предложение\проблема
     category = State() # вуц\учеба\общежитие...

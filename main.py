@@ -8,7 +8,7 @@ from aiogram.types import BotCommand, CallbackQuery
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from sqlalchemy.orm import sessionmaker
 
-from config import load_config
+from config import config
 from core.filters.role import RoleFilter, AdminFilter
 from core.handlers.admin import register_admin
 from core.handlers.user import register_user_handlers
@@ -43,7 +43,7 @@ async def main():
         ]
     )
     logger.info("Starting bot")
-    config = load_config()
+    # config = load_config()
 
     storage = MemoryStorage()
     db_pool: sessionmaker = await create_db_pool(

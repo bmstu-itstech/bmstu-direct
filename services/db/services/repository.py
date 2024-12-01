@@ -66,7 +66,7 @@ class Repo:
         self.conn.add(ticket)
         await self.conn.commit()
 
-        logger.info(f'add new ticket with id: {Ticket.ticket_id=}')
+        logger.info(f'add new ticket with id: {ticket.ticket_id=}')
 
         return ticket
 
