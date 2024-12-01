@@ -15,3 +15,4 @@ class DbMiddleware(LifetimeControllerMiddleware):
         db: AsyncSession = self.pool()
         data["db"] = db
         data["repo"] = Repo(db)
+

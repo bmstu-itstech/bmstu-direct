@@ -5,8 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
 
-from services.db.models import Base
-
+from services.db.models import Base, BaseCommon
 
 logger = logging.getLogger(__name__)
 

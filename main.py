@@ -3,14 +3,15 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import BotCommand
+from aiogram.utils import executor
+from aiogram.types import BotCommand, CallbackQuery
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from sqlalchemy.orm import sessionmaker
 
-from config import load_config
+from config import config
 from core.filters.role import RoleFilter, AdminFilter
 from core.handlers.admin import register_admin
-from core.handlers.user import register_user
+from core.handlers.user import register_user_handlers
 from core.middlewares.db import DbMiddleware
 from core.middlewares.role import RoleMiddleware
 from core.middlewares.user_control import UserControlMiddleware
@@ -42,7 +43,7 @@ async def main():
         ]
     )
     logger.info("Starting bot")
-    config = load_config()
+    # config = load_config()
 
     storage = MemoryStorage()
     db_pool: sessionmaker = await create_db_pool(
@@ -64,10 +65,11 @@ async def main():
     dp.filters_factory.bind(AdminFilter)
 
     register_admin(dp)
-    register_user(dp)
+    register_user_handlers(dp)
+
 
     try:
-        await dp.start_polling(allowed_updates=["message", "callback_query"])
+        await dp.start_polling(allowed_updates=["message", "callback_query", "inline_query"])
     finally:
         await dp.storage.close()
         await dp.storage.wait_closed()
@@ -77,5 +79,7 @@ async def main():
 if __name__ == "__main__":
     try:
         asyncio.run(main())
+        executor.start_polling(Dispatcher, skip_updates=True)
     except (KeyboardInterrupt, SystemExit):
         logger.error("Bot stopped!")
+

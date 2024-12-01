@@ -22,3 +22,4 @@ class RoleMiddleware(LifetimeControllerMiddleware):
 
     async def post_process(self, obj, data, *args):
         del data["role"]
+
