@@ -12,28 +12,25 @@ load_dotenv()
 def get_env_variable(key, default=None):
     value = os.getenv(key, default)
     if value is None:
-        logger.error(f'Отсутсвует переменная: {key}, проверь файл .env и сверься с файлом .env-example!')
+        logger.error(f'Отсутствует переменная: {key}, проверь файл .env и сверься с файлом .env-example!')
         sys.exit(1)
     return value
 
 
-try:
-    BOT_TOKEN = get_env_variable("Bot_token")
-    ADMINS_IDS = list(map(int, get_env_variable('Bot_admin_ids').split(',')))
-    DB_NAME = get_env_variable("Db_name")
-    DB_PASSWORD = get_env_variable("Db_password")
-    DB_ADDRESS = get_env_variable("Db_address")
-    DB_USER = get_env_variable("Db_user")
-    QUESTIONS_CHAT = get_env_variable("Questions_chat_id")
-    QUESTIONS_COMMENT = get_env_variable('Questions_comment_id')
-    PROBLEMS_CHAT = get_env_variable("Problems_chat_id")
-    PROBLEMS_COMMENT = get_env_variable('Problems_comment_id')
-    SUGGESTIONS_CHAT = get_env_variable("Suggestions_chat_id")
-    SUGGESTIONS_COMMENT = get_env_variable('Suggestions_comment_id')
 
-except Exception as e:
-    logger.exception('Произошла ошибка при запуске')
-    sys.exit(1)
+BOT_TOKEN = get_env_variable("BOT_TOKEN")
+ADMINS_IDS = list(map(int, get_env_variable('BOT_ADMINS_ID').split(',')))
+DB_NAME = get_env_variable("DB_NAME")
+DB_PASSWORD = get_env_variable("DB_PASSWORD")
+DB_ADDRESS = get_env_variable("DB_ADDRESS")
+DB_USER = get_env_variable("DB_USER")
+QUESTIONS_CHAT = get_env_variable("QUESTION_CHAT_ID")
+QUESTIONS_COMMENT = get_env_variable('QUESTION_COMMENT_ID')
+PROBLEMS_CHAT = get_env_variable("PROBLEMS_CHAT_ID")
+PROBLEMS_COMMENT = get_env_variable('PROBLEMS_COMMENT_ID')
+SUGGESTIONS_CHAT = get_env_variable("SUGGESTIONS_CHAT_ID")
+SUGGESTIONS_COMMENT = get_env_variable('SUGGESTIONS_COMMENT_ID')
+
 
 
 @dataclass
