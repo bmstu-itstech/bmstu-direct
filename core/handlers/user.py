@@ -4,7 +4,6 @@ from aiogram import Dispatcher
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.types import Message
-# from sqlalchemy.util import await_fallback
 
 from core.models.enums import TicketType
 from services.db.services.repository import Repo
@@ -26,15 +25,15 @@ async def start(msg: Message, repo: Repo, state: FSMContext):
     await state.finish()
     is_any_to_edit = await repo.get_opened_tickets_by_user(msg.from_user.id)
     has_opened = True if is_any_to_edit else False
-    await msg.answer("Привет!", reply_markup= await keyboards.main_kb(has_opened))
+    await msg.answer("Привет!",   reply_markup=keyboards.main_kb(has_opened))
 
 
 async def create_ticket(msg: Message, state: FSMContext):
     logger.info('handled create')
 
 
-    await msg.reply(text.TicketText.ask_type,
-                    reply_markup=await keyboards.type_select_kb())
+    await msg.reply(text.Ticket.ask_type,
+                    reply_markup=keyboards.type_select_kb())
 
     await state.set_state(Ticket.group)
     await state.update_data(tg_user_id=msg.from_user.id)
@@ -43,7 +42,7 @@ async def create_ticket(msg: Message, state: FSMContext):
 
 async def my_tickets(msg: Message, state: FSMContext):
     await state.finish()
-    await msg.reply(text.Error.no_func, reply_markup=await keyboards.main_kb())
+    await msg.reply(text.Error.no_func,  reply_markup=keyboards.main_kb())
     raise NotImplemented
 
 
@@ -53,20 +52,19 @@ async def ticket_type(msg: Message, repo: Repo, state: FSMContext):
     if msg.text == text.Btn.problem:
         await state.update_data(type=TicketType.Problem)
     elif msg.text == text.Btn.question:
-        await state.update_data(type=TicketType.Question)
+        await state.update_data(type=TicketType.QUESTION)
     elif msg.text == text.Btn.suggest:
-        await state.update_data(type=TicketType.Suggest)
+        await state.update_data(type=TicketType.SUGGEST)
     else:
-        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
         await msg.reply(text.Error.undefined_behaviour,
-                        reply_markup=await keyboards.type_select_kb())
+                         reply_markup=keyboards.type_select_kb())
         return
 
     await state.set_state(Ticket.category)
-    kb = await keyboards.categories_select_kb(repo=repo)
-    logger.info(kb)
-    await msg.reply(text.TicketText.ask_category,
-              reply_markup=kb)
+    cats = await repo.unique_categories()
+    await msg.reply(text.Ticket.ask_category,
+                    reply_markup=keyboards.categories_select_kb(cats))
 
 
 async def ticket_category(msg: Message, repo: Repo, state: FSMContext):
@@ -74,11 +72,11 @@ async def ticket_category(msg: Message, repo: Repo, state: FSMContext):
     cats = await repo.unique_categories()
     if msg.text in cats:
         await state.update_data(category=msg.text)
-        await msg.reply(text.TicketText.ask_anonim,
-                        reply_markup=await keyboards.yes_no_keyboard())
+        await msg.reply(text.Ticket.ask_anonim,
+                        reply_markup=keyboards.yes_no_keyboard())
         await state.set_state(Ticket.is_anonim)
     else:
-        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
         await msg.reply(text.Error.undefined_behaviour)
 
 
@@ -87,17 +85,17 @@ async def ticket_anonim(msg: Message, state: FSMContext):
     if msg.text == text.Btn.yes:
         await state.update_data(is_anonim=True)
         await state.set_state(Ticket.text)
-        await msg.reply(text.TicketText.ask_text)
+        await msg.reply(text.Ticket.ask_text)
         logger.info(f'tg_us_id: {msg.from_user.id} pinned ticket as anonim')
     elif msg.text == text.Btn.no:
         await state.update_data(is_anonim=False)
         await state.set_state(Ticket.name)
-        await msg.reply(text.TicketText.ask_name,
-                        reply_markup=await keyboards.back_kb())
+        await msg.reply(text.Ticket.ask_name,
+                        reply_markup=keyboards.back_kb())
     else:
-        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
         await msg.reply(text.Error.undefined_behaviour,
-                        reply_markup=await keyboards.yes_no_keyboard())
+                         reply_markup=keyboards.yes_no_keyboard())
 
 
 async def ticket_name(msg: Message, state: FSMContext):
@@ -105,11 +103,11 @@ async def ticket_name(msg: Message, state: FSMContext):
     if await funcs.validate_name(msg.text):
         await state.update_data(name=msg.text)
         await state.set_state(Ticket.group)
-        await msg.reply(text.TicketText.ask_group)
+        await msg.reply(text.Ticket.ask_group)
     else:
-        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.TicketText.retry_ask_name,
-                        reply_markup=await keyboards.back_kb())
+        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        await msg.reply(text.Ticket.retry_ask_name,
+                        reply_markup=keyboards.back_kb())
 
 
 async def ticket_group(msg: Message, state: FSMContext):
@@ -117,11 +115,11 @@ async def ticket_group(msg: Message, state: FSMContext):
     if await funcs.validate_group(msg.text):
         await state.update_data(group=msg.text)
         await state.set_state(Ticket.text)
-        await msg.reply(text.TicketText.ask_text)
+        await msg.reply(text.Ticket.ask_text)
     else:
-        logger.error(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.TicketText.retry_ask_group,
-                        reply_markup=await keyboards.back_kb())
+        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
+        await msg.reply(text.Ticket.retry_ask_group,
+                        reply_markup=keyboards.back_kb())
 
 
 async def ticket_text(msg: Message, repo: Repo, state: FSMContext):
@@ -130,7 +128,7 @@ async def ticket_text(msg: Message, repo: Repo, state: FSMContext):
     data = await state.get_data()
     await state.finish()
     await send_ticket(repo, data)
-    await msg.reply(text.TicketText.successful_sent, reply_markup=await keyboards.main_kb())
+    await msg.reply(text.Ticket.successful_sent, reply_markup=keyboards.main_kb())
 
 
 async def send_ticket(repo: Repo, data: dict):
@@ -145,16 +143,20 @@ async def help_handler(msg: Message, state: FSMContext):
     logger.info('handled help')
 
     await state.finish()
-    await msg.reply(text.TicketText.hello_message,
-                    reply_markup=await keyboards.main_kb())
+    await msg.reply(text.Ticket.hello_message,
+                    reply_markup=keyboards.main_kb())
 
 
 async def back(msg: Message, state: FSMContext):
     logger.info('handled back')
 
     await state.finish()
-    await msg.reply(text.TicketText.hello_message,
-                    reply_markup=await keyboards.main_kb())
+    await msg.reply(text.Ticket.hello_message,
+                    reply_markup=keyboards.main_kb())
+
+
+async def blocked(msg: Message):
+    await msg.reply(text.Error.blocked)
 
 
 def register_user(dp: Dispatcher):
@@ -173,5 +175,3 @@ def register_user(dp: Dispatcher):
     dp.register_message_handler(ticket_text, state=Ticket.text)
     dp.register_message_handler(help_handler, commands=["help"])
     dp.register_message_handler(help_handler, Text(text.Btn.help))
-
-

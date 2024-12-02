@@ -1,6 +1,3 @@
-# import datetime
-#
-# from aiogram.dispatcher.handler import CancelHandler
 from aiogram.dispatcher.middlewares import LifetimeControllerMiddleware
 
 from config import load_config

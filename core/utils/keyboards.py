@@ -1,5 +1,4 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from services.db.services.repository import Repo
 from core.text.text import Btn as Text
 
 
@@ -26,7 +25,7 @@ class Buttons:
     make_admin = KeyboardButton(Text.make_admin)
 
 
-async def main_kb(is_any_opened_tickets: bool = False):
+def main_kb(is_any_opened_tickets: bool = False) -> ReplyKeyboardMarkup:
     base = [
         [Buttons.make_ticket],
         [Buttons.help],
@@ -38,7 +37,7 @@ async def main_kb(is_any_opened_tickets: bool = False):
     return ReplyKeyboardMarkup(base)
 
 
-async def type_select_kb():
+def type_select_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [[Buttons.problem],
                   [Buttons.question],
@@ -46,8 +45,7 @@ async def type_select_kb():
                   [Buttons.back]], one_time_keyboard=True, resize_keyboard=True)
 
 
-async def categories_select_kb(repo: Repo) -> ReplyKeyboardMarkup:
-    cats = await repo.unique_categories()
+def categories_select_kb(cats: list[str]) -> ReplyKeyboardMarkup:
     base = []
     for i in range(len(cats)):
         if i % 2:
@@ -59,17 +57,17 @@ async def categories_select_kb(repo: Repo) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(base, resize_keyboard=True)
 
 
-async def yes_no_keyboard():
+def yes_no_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [[Buttons.yes, Buttons.no],
          [Buttons.back]], one_time_keyboard=True)
 
 
-async def back_kb():
+def back_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup([[Buttons.back]], one_time_keyboard=True)
 
 
-async def admin_kb() -> ReplyKeyboardMarkup:
+def admin_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [[Buttons.edit_types, Buttons.edit_categories],
          [Buttons.block_user, Buttons.unblock_user],

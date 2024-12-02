@@ -13,7 +13,7 @@ class BaseCommon(Base):
     updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
-class Users(BaseCommon):
+class User(BaseCommon):
     __tablename__ = "users"
 
     tg_user_id = Column(BigInteger, primary_key=True)
@@ -22,7 +22,7 @@ class Users(BaseCommon):
     role = Column(Enum(UserRole))
 
 
-class Tickets(BaseCommon):
+class Ticket(BaseCommon):
     __tablename__ = "tickets"
 
     ticket_id = Column(Integer, primary_key=True, nullable=False)
@@ -37,7 +37,7 @@ class Tickets(BaseCommon):
 
 
 class Category(BaseCommon):
-    __tablename__ = 'tickets_category'
+    __tablename__ = 'categories'
     id = Column(Integer, primary_key=True)
     ticket_id = Column(Integer, nullable=False)
     category = Column(Text, nullable=False)

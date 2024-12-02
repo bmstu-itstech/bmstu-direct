@@ -35,4 +35,4 @@ class AdminFilter(BoundFilter):
         if self.is_admin is None:
             return True
         data = ctx_data.get()
-        return (data.get("role") is UserRole.Admin) == self.is_admin
+        return (data.get("role") is UserRole.ADMIN) == self.is_admin

@@ -1,14 +1,14 @@
-from enum import IntEnum
+from enum import Enum
 
 
-class UserRole(IntEnum):
-    Blocked = -1
-    User = 0
-    Moderator = 1
-    Admin = 2
+class UserRole(str, Enum):
+    BLOCKED = "BLOCKED"
+    USER = "USER"
+    MODERATOR = "MODERATOR"
+    ADMIN = "ADMIN"
 
 
-class TicketType(IntEnum):
-    Question = 0
-    Problem = 1
-    Suggest = 2
+class TicketType(str, Enum):
+    QUESTION = "QUESTION"
+    PROBLEM = "PROBLEM"
+    SUGGEST = "SUGGEST"

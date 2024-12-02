@@ -90,7 +90,7 @@ async def add_ticket(data, msg_link, repo: Repo):
 async def choose_ch_id(data: dict):
     if data["type"] == TicketType.Problem:
         return channel_ids.problem_channel
-    if data["type"] == TicketType.Question:
+    if data["type"] == TicketType.QUESTION:
         return channel_ids.question_channel
-    if data["type"] == TicketType.Suggest:
+    if data["type"] == TicketType.SUGGEST:
         return channel_ids.suggest_channel
