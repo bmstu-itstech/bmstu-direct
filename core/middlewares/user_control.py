@@ -30,6 +30,11 @@ class UserControlMiddleware(LifetimeControllerMiddleware):
         else:
             logger.info('User %s found', this_user.id)
 
+        # user = await repo.get_user_by_telegram_id(this_user.id)
+        # if user is not None:
+        #     await repo.update_user()
+        # # todo: add user if it does not exist in DB
+
 
     async def post_process(self, obj, data, *args):
         del data["repo"]
