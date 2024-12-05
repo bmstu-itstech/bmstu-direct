@@ -4,7 +4,7 @@ from aiogram.dispatcher.filters import BoundFilter
 from aiogram.dispatcher.handler import ctx_data
 from aiogram.types.base import TelegramObject
 
-from core.models.enums import UserRole
+from core.models.role import UserRole
 
 
 class RoleFilter(BoundFilter):
@@ -35,4 +35,4 @@ class AdminFilter(BoundFilter):
         if self.is_admin is None:
             return True
         data = ctx_data.get()
-        return (data.get("role") is UserRole.ADMIN) == self.is_admin
+        return (data.get("role") is UserRole.OWNER) == self.is_admin

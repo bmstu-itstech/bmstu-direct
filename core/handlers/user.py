@@ -1,177 +1,188 @@
 import logging
 
-from aiogram import Dispatcher
+from aiogram import Dispatcher, Bot
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
-from core.models.enums import TicketType
-from services.db.services.repository import Repo
-from config import load_config
+from core.states.Ticket_States import Registration
+from core.utils.keyboards import *
 from core.text import text
-from core.states.ticket_states import Ticket
-from core.utils.variables import bot
-from core.utils import funcs, keyboards
+from services.db.services.repository import Repo
+from config import config
 
 
 logger = logging.getLogger(__name__)
-config = load_config()
+# config = load_config()
+
+bot = Bot(config.tg_bot.token)
+dp = Dispatcher(bot=bot)
+
+questions_chat = config.channel.questions_chat_id # чат для вопросов
+problems_chat = config.channel.problems_chat_id # чат для проблем
+suggestions_chat = config.channel.suggestions_chat_id # чат для предложений
+
+DATA_TYPE_KEY = 'type'
+DATA_CATEGORY_KEY = 'category'
+DATA_ANONIM_KEY = 'is_anonim'
+DATA_FIO_KEY = 'fio'
+DATA_STUDY_GROUP_KEY = 'study_group'
+DATA_TEXT_KEY = 'text_statement'
+
+
+async def start(message: Message, repo: Repo, state: FSMContext):
+    # use repo object to iteract with DB
+    # await repo.add_user(message.from_user.id)
+    await state.finish()
+    await message.answer(text.Ticket.hello_message,
+                         reply_markup=get_first_statement_button()
+                         )
+
+
+async def choice_start_statement(callback_query: CallbackQuery): # обработчик кнопки Подать заявление
+    await Registration.type.set()
+    await bot.send_message(text=text.Ticket.ask_type,
+                                chat_id=callback_query.from_user.id,
+                                reply_markup=get_type_of_statement_keyboard())
+
+
+"""
+Функция для состояние (выбор типа заявления), от этого выбора зависит 
+в какой канал будет отправлен тикет к модератору.
+"""
+async def choice_type_statement(message: Message, state: FSMContext):
+    async with state.proxy() as data: # запоминаем тип заявления
+        data[DATA_TYPE_KEY] = message.text
+    await message.answer(text=f'Вы выбрали тип заявления: {message.text}')
+    await message.answer(text=text.Ticket.ask_category,
+                                        reply_markup=get_category_of_statement_keyboard())
+    await Registration.next() # переходим к состоянию category
+
+
+"""
+Функция для состояние (выбора категории), пока что сделана заглушка 
+для категорий "Военная кафедра" и "Поступление"
+"""
+async def choice_is_category(message: Message, state: FSMContext):
+    async with state.proxy() as data:
+        data[DATA_CATEGORY_KEY] = message.text
+
+    await message.answer(text= f'Вы выбрали категорию {message.text}')
+    if message.text == text.StandartCats.army:
+        await message.answer(text=text.Ticket.army_links,
+                             reply_markup=get_first_statement_button())
+        await state.finish()
+
+    elif message.text == text.StandartCats.entry:
+        await message.answer(text=text.Ticket.entry_links,
+                             reply_markup=get_first_statement_button())
+        await state.finish()
+
+    else:
+        await message.answer(text=text.Ticket.ask_anonim,
+                                        reply_markup=get_anonim_keyboard())
+    await Registration.next()
+
+
+"""
+Функция для состояние (выбора анонимно ли подается заявление). В зависимости от этого выбора в дальнейшем будет меняться
+маршрут состояний.
+"""
+async def choice_is_anonim(message: Message, state: FSMContext):
+    if message.text == text.Btn.yes:
+        async with state.proxy() as data:
+            data[DATA_ANONIM_KEY] = "True"
+
+        await message.answer(text=text.Ticket.ask_text, reply_markup=ReplyKeyboardRemove())
+        await Registration.text_statement.set()
+
+    elif message.text == text.Btn.no:
+        async with state.proxy() as data:
+            data[DATA_ANONIM_KEY] = "False"
+
+        await message.answer(text=text.Ticket.ask_name, reply_markup=ReplyKeyboardRemove())
+        await Registration.fio.set()
+
+    else:
+        await message.answer(text=text.Error.undefined_behaviour, reply_markup=get_anonim_keyboard())
+
+
+"""
+Функция для состояние (ввод Имени\Фио), пока что без валидности (проверки на правильность ввода)
+В дальнейшем добавим.
+"""
+async def input_fio(message: Message, state: FSMContext):
+    async with state.proxy() as data:
+        data[DATA_FIO_KEY] = message.text
+
+    await message.answer(text=f'Ваше фио: {message.text}')
+    await message.answer(text=text.Ticket.ask_group)
+    await Registration.next()
+
+
+"""
+Функция для состояние (ввод учебной группы), пока что без валидности (проверки на правильность ввода)
+В дальнейшем добавим.
+"""
+async def input_study_group(message:  Message, state: FSMContext):
+    async with state.proxy() as data:
+        data[DATA_STUDY_GROUP_KEY] = message.text
+
+    await message.answer(text=f'Ваша учебная группа: {message.text}')
+    await message.answer(text=text.Ticket.ask_text)
+    await Registration.text_statement.set()
+
+
+"""
+функция для последнего (на данный момент) состояния пользователя, ожидание ввода текста заявления.
+В дальнейшем будет добавлено состояние, ожидание ответа от модератора.
+"""
+async def input_text(message: Message, state: FSMContext, repo: Repo):
+    async with state.proxy() as data:
+        data[DATA_TEXT_KEY] = message.text
+
+    await message.answer(text=f'Вы ввели {message.text}')
+    user_data = await state.get_data()
+    # all_data = '\n'.join([f"{key}: {value}" for key, value in user_data.items()])
+    # # Пока тестовый вывод данные поданного заявления пользователю в чат
+    # await message.answer(text= f'Ваши данные из фсм:\n'
+    #                                           f'{all_data}')
+    await message.answer(text=text.Ticket.successful_sent,
+                         reply_markup=get_first_statement_button())
 
 
 
-async def start(msg: Message, repo: Repo, state: FSMContext):
-    logger.info('handled start')
+    if data[DATA_ANONIM_KEY] == text.Btn.yes:
+        ticket = await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
+                                        text=data['text_statement'], type=data['type'], category=data['category'],
+                                        is_anonim=data['is_anonim'], is_closed='False')
+    else:
+        await repo.update_user(tg_id=message.from_user.id, name=data['fio'], group=data['study_group'])
+        ticket = await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
+                                        text=data['text_statement'], type=data['type'], category=data['category'],
+                                        is_anonim=data['is_anonim'], is_closed='False')
+
+
+    if data[DATA_TYPE_KEY] == text.Btn.question:
+        await bot.send_message(chat_id=questions_chat,
+                               text=text.make_ticket_text(user_data, ticket.ticket_id))
+    elif data[DATA_TYPE_KEY] == text.Btn.problem:
+        await bot.send_message(chat_id=problems_chat,
+                               text=text.make_ticket_text(user_data, ticket.ticket_id))
+    elif data[DATA_TYPE_KEY] == text.Btn.suggest:
+        await bot.send_message(chat_id=suggestions_chat,
+                               text=text.make_ticket_text(user_data, ticket.ticket_id))
 
     await state.finish()
-    is_any_to_edit = await repo.get_opened_tickets_by_user(msg.from_user.id)
-    has_opened = True if is_any_to_edit else False
-    await msg.answer("Привет!",   reply_markup=keyboards.main_kb(has_opened))
 
 
-async def create_ticket(msg: Message, state: FSMContext):
-    logger.info('handled create')
-
-
-    await msg.reply(text.Ticket.ask_type,
-                    reply_markup=keyboards.type_select_kb())
-
-    await state.set_state(Ticket.group)
-    await state.update_data(tg_user_id=msg.from_user.id)
-    await state.set_state(Ticket.type)
-
-
-async def my_tickets(msg: Message, state: FSMContext):
-    await state.finish()
-    await msg.reply(text.Error.no_func,  reply_markup=keyboards.main_kb())
-    raise NotImplemented
-
-
-async def ticket_type(msg: Message, repo: Repo, state: FSMContext):
-    logger.info('handled type')
-
-    if msg.text == text.Btn.problem:
-        await state.update_data(type=TicketType.Problem)
-    elif msg.text == text.Btn.question:
-        await state.update_data(type=TicketType.QUESTION)
-    elif msg.text == text.Btn.suggest:
-        await state.update_data(type=TicketType.SUGGEST)
-    else:
-        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.Error.undefined_behaviour,
-                         reply_markup=keyboards.type_select_kb())
-        return
-
-    await state.set_state(Ticket.category)
-    cats = await repo.unique_categories()
-    await msg.reply(text.Ticket.ask_category,
-                    reply_markup=keyboards.categories_select_kb(cats))
-
-
-async def ticket_category(msg: Message, repo: Repo, state: FSMContext):
-    logger.info('handled cat')
-    cats = await repo.unique_categories()
-    if msg.text in cats:
-        await state.update_data(category=msg.text)
-        await msg.reply(text.Ticket.ask_anonim,
-                        reply_markup=keyboards.yes_no_keyboard())
-        await state.set_state(Ticket.is_anonim)
-    else:
-        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.Error.undefined_behaviour)
-
-
-async def ticket_anonim(msg: Message, state: FSMContext):
-    logger.info('handled anon')
-    if msg.text == text.Btn.yes:
-        await state.update_data(is_anonim=True)
-        await state.set_state(Ticket.text)
-        await msg.reply(text.Ticket.ask_text)
-        logger.info(f'tg_us_id: {msg.from_user.id} pinned ticket as anonim')
-    elif msg.text == text.Btn.no:
-        await state.update_data(is_anonim=False)
-        await state.set_state(Ticket.name)
-        await msg.reply(text.Ticket.ask_name,
-                        reply_markup=keyboards.back_kb())
-    else:
-        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.Error.undefined_behaviour,
-                         reply_markup=keyboards.yes_no_keyboard())
-
-
-async def ticket_name(msg: Message, state: FSMContext):
-    logger.info('handled name')
-    if await funcs.validate_name(msg.text):
-        await state.update_data(name=msg.text)
-        await state.set_state(Ticket.group)
-        await msg.reply(text.Ticket.ask_group)
-    else:
-        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.Ticket.retry_ask_name,
-                        reply_markup=keyboards.back_kb())
-
-
-async def ticket_group(msg: Message, state: FSMContext):
-    logger.info('handled group')
-    if await funcs.validate_group(msg.text):
-        await state.update_data(group=msg.text)
-        await state.set_state(Ticket.text)
-        await msg.reply(text.Ticket.ask_text)
-    else:
-        logger.warning(f'tg_us_id: {msg.from_user.id} undefined behaviour ms: {msg.text}')
-        await msg.reply(text.Ticket.retry_ask_group,
-                        reply_markup=keyboards.back_kb())
-
-
-async def ticket_text(msg: Message, repo: Repo, state: FSMContext):
-    logger.info('handled text')
-    await state.update_data(text=msg.text)
-    data = await state.get_data()
-    await state.finish()
-    await send_ticket(repo, data)
-    await msg.reply(text.Ticket.successful_sent, reply_markup=keyboards.main_kb())
-
-
-async def send_ticket(repo: Repo, data: dict):
-    chan_id = await funcs.choose_ch_id(data)
-    msg = await bot.send_message(chan_id, text.make_ticket_text(data))
-    msg_link = await funcs.message_link(chan_id, msg.message_id)
-    await funcs.add_ticket(data, msg_link, repo)
-    logger.info(f"user {data['tg_user_id']} sent ticket url: {msg_link}")
-
-
-async def help_handler(msg: Message, state: FSMContext):
-    logger.info('handled help')
-
-    await state.finish()
-    await msg.reply(text.Ticket.hello_message,
-                    reply_markup=keyboards.main_kb())
-
-
-async def back(msg: Message, state: FSMContext):
-    logger.info('handled back')
-
-    await state.finish()
-    await msg.reply(text.Ticket.hello_message,
-                    reply_markup=keyboards.main_kb())
-
-
-async def blocked(msg: Message):
-    await msg.reply(text.Error.blocked)
-
-
-def register_user(dp: Dispatcher):
-    dp.register_message_handler(start, commands=["start"], state='*')
-    dp.register_message_handler(create_ticket, commands=["create_ticket"])
-    dp.register_message_handler(back, Text(text.Btn.back), state='*')
-    dp.register_message_handler(back, commands=['back'], state='*')
-    dp.register_message_handler(create_ticket, Text(text.Btn.make_ticket))
-    dp.register_message_handler(my_tickets,Text(text.Btn.my_tickets))
-
-    dp.register_message_handler(ticket_type, state=Ticket.type)
-    dp.register_message_handler(ticket_category, state=Ticket.category)
-    dp.register_message_handler(ticket_anonim, state=Ticket.is_anonim)
-    dp.register_message_handler(ticket_name, state=Ticket.name)
-    dp.register_message_handler(ticket_group, state=Ticket.group)
-    dp.register_message_handler(ticket_text, state=Ticket.text)
-    dp.register_message_handler(help_handler, commands=["help"])
-    dp.register_message_handler(help_handler, Text(text.Btn.help))
+def register_user_handlers(dp: Dispatcher):
+    dp.register_message_handler(start, commands=[text.Commands.start], state="*")
+    dp.register_message_handler(start, Text(text.Btn.back), state='*')
+    dp.register_message_handler(choice_start_statement, Text(text.Btn.make_ticket), state='*')
+    dp.register_message_handler(choice_type_statement,  state=Registration.type)
+    dp.register_message_handler(choice_is_category, state=Registration.category)
+    dp.register_message_handler(choice_is_anonim, state=Registration.is_anonim)
+    dp.register_message_handler(input_fio, state=Registration.fio)
+    dp.register_message_handler(input_study_group, state=Registration.study_group)
+    dp.register_message_handler(input_text, state=Registration.text_statement)

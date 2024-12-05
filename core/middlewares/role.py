@@ -1,6 +1,6 @@
 from aiogram.dispatcher.middlewares import LifetimeControllerMiddleware
 
-from core.models.enums import UserRole
+from core.models.role import UserRole
 
 
 class RoleMiddleware(LifetimeControllerMiddleware):
@@ -15,10 +15,11 @@ class RoleMiddleware(LifetimeControllerMiddleware):
             data["role"] = None
             return
 
-        data["role"] = UserRole.User
+        data["role"] = UserRole.USER
 
         if obj.from_user.id in self.owner_ids:
-            data["role"] = UserRole.ADMIN
+            data["role"] = UserRole.OWNER
 
     async def post_process(self, obj, data, *args):
         del data["role"]
+

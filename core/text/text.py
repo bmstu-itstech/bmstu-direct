@@ -8,7 +8,7 @@ class Error:
 
 
 class Ticket:
-    hello_message = "Здравствуйте, это бот для обратнйо связи студентов МГТУ им. Н.Э. Баумана "
+    hello_message = "Здравствуйте, это бот для обратной связи студентов МГТУ им. Н.Э. Баумана "
     ask_is_new = "Вы хотите дополнить уже созданное обращение или создать новое?"
     ask_type = "Пожалуйста выберите тип обращения."
     ask_category = "Пожалуйста выберите категорию обращения."
@@ -21,6 +21,13 @@ class Ticket:
     successful_sent = "Обращение успешно отправлено, ожидайте.\nТакже вы можете создать новое оп кнопкам на клавиатуре."
     answer_received = "Ответ получен.\nОн вас устраивает? нажмите соответствующую кнопку в меню."
     ask_contact = "Пожалуйста оставьте ваш контакт (номер телефона / почта / ссылка на соцсеть)."
+    entry_links = "Вот ссылка на сайт приемной комиссии\nhttps://bmstu.ru/"
+    army_links = "Вот ссылка на сайт вуц\n https://mil.bmstu.ru/"
+
+
+class Commands:
+    admin_menu = "admin"
+    start = "start"
 
 
 class Btn:
@@ -35,6 +42,7 @@ class Btn:
     suggest = 'Предложение'
 
     # admin_buttons
+    admin_panel = "Админ-панель"
     edit_types = "edit_types"
     edit_categories = "edit_categories"
     block_user = "block user"
@@ -45,31 +53,32 @@ class Btn:
     make_admin = "make_admin"
 
 
-cats = [
-    'Учёба',
-    'Общежитие',
-    'Питание',
-    'Медицина',
-    'Военная кафедра',
-    'Поступление',
-    'Документы',
-    'Стипендия и выплаты',
-    'Внеучебная деятельность',
-    'Другое'
-]
+class StandartCats:
+
+    study = 'Учёба'
+    hostel = 'Общежитие'
+    food = 'Питание'
+    medicine = 'Медицина'
+    army = 'Военная кафедра'
+    entry = 'Поступление'
+    documents = 'Документы'
+    money = 'Стипендия и выплаты'
+    electives = 'Внеучебная деятельность'
+    other = 'Другое'
 
 
-def make_ticket_text(data: dict) -> str:
+
+def make_ticket_text(data: dict, ticket_id: int) -> str:
     text = f'''
-    Отрытое заявление
+    #{ticket_id}\nОтрытое заявление
     тип: {data["type"]}
     категория: {data["category"]}'''
 
-    if data["is_anonim"]:
+    if data["is_anonim"] == "True":
         text += '\n Анонимное.\n\n'
     else:
-        text += f'\n от {data["name"]} \nиз группы {data["group"]}\n\n'
+        text += f'\n от {data["fio"]} \nиз группы {data["study_group"]}\n\n'
 
-    text += data["text"]
+    text += data["text_statement"]
 
     return text
