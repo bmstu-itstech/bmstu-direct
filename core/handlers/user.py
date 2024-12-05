@@ -53,7 +53,6 @@ async def choice_start_statement(callback_query: CallbackQuery): # обрабо�
 async def choice_type_statement(message: Message, state: FSMContext):
     async with state.proxy() as data: # запоминаем тип заявления
         data[DATA_TYPE_KEY] = message.text
-    await message.answer(text=f'Вы выбрали тип заявления: {message.text}')
     await message.answer(text=text.Ticket.ask_category,
                                         reply_markup=get_category_of_statement_keyboard())
     await Registration.next() # переходим к состоянию category
@@ -67,7 +66,6 @@ async def choice_is_category(message: Message, state: FSMContext):
     async with state.proxy() as data:
         data[DATA_CATEGORY_KEY] = message.text
 
-    await message.answer(text= f'Вы выбрали категорию {message.text}')
     if message.text == text.StandartCats.army:
         await message.answer(text=text.Ticket.army_links,
                              reply_markup=get_first_statement_button())
