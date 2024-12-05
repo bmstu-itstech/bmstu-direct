@@ -82,4 +82,3 @@ if __name__ == "__main__":
         executor.start_polling(Dispatcher, skip_updates=True)
     except (KeyboardInterrupt, SystemExit):
         logger.error("Bot stopped!")
-

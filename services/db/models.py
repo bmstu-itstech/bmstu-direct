@@ -16,6 +16,7 @@ class BaseCommon(Base):
     updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     pass
 
+
 """
 Енамы пока что нигде не используются, сделано на будущее. )))))
 """
@@ -23,6 +24,7 @@ class IssueTypes(str, Enum):
     QUESTIONS = 'questions'
     PROBLEMS = 'problems'
     SUGGESTIONS = 'suggestions'
+
 
 class IssueCategory(str, Enum):
     STUDY = 'food'
@@ -36,6 +38,7 @@ class IssueCategory(str, Enum):
     EXTRACURRICULAR_ACTIVITIES = 'extracurricular_activities'
     OTHER = 'other'
 
+
 class User(BaseCommon):
     __tablename__ = "users"
 
@@ -43,6 +46,7 @@ class User(BaseCommon):
     name = Column(Text, nullable=True, default=NullType)
     group = Column(Text, nullable=True, default=NullType)
     role = Column(Integer, default=0, nullable=False)
+
 
 class Ticket(BaseCommon):
     __tablename__ = 'ticket'
@@ -55,4 +59,3 @@ class Ticket(BaseCommon):
     category = Column(Text, nullable=False)
     is_anonim = Column(Text, default=1, nullable=False)
     is_closed = Column(Text, default=0, nullable=False)
-
