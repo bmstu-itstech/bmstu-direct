@@ -9,8 +9,6 @@ class Registration(StatesGroup):
     fio = State() # ввод фио
     study_group = State() # ввод учебной группы
     text_statement = State() # ввод текста обращения
-    # wait_answer = State() # после подачи заявления, ожидание ответа от модератора
-    # wait_or_finish = State() #Предложение продолжить общение или закончить
     end = State()
 
 class Comments_Moderator(StatesGroup):

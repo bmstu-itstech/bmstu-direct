@@ -8,6 +8,7 @@ from sqlalchemy.util import await_only
 
 from core.states.Ticket_States import Registration, Comments_Moderator
 from core.utils.keyboards import *
+from core.text import text
 from services.db.services.repository import Repo
 from config import config
 
@@ -19,11 +20,8 @@ bot = Bot(config.tg_bot.token)
 dp = Dispatcher(bot=bot)
 
 questions_chat = config.channel.questions_chat_id # чат для вопросов
-questions_comment = config.channel.questions_comment_id
 problems_chat = config.channel.problems_chat_id # чат для проблем
-problems_comment = config.channel.problems_comment_id
 suggestions_chat = config.channel.suggestions_chat_id # чат для предложений
-suggestions_comment = config.channel.suggestions_comment_id
 
 DATA_TYPE_KEY = 'type'
 DATA_CATEGORY_KEY = 'category'
@@ -36,14 +34,13 @@ async def start(message: Message, repo: Repo, state: FSMContext):
     # use repo object to iteract with DB
     # await repo.add_user(message.from_user.id)
     await state.finish()
-    await message.answer("Привет!\n"
-                         "Для подачи заявления нажми кнопку ниже",
+    await message.answer(text.Ticket.hello_message,
                          reply_markup=get_first_statement_button()
                          )
 
 async def choice_start_statement(callback_query: CallbackQuery): # обработчик кнопки Подать заявление
     await Registration.type.set()
-    await bot.send_message(text='Далее выберите тип заявления',
+    await bot.send_message(text=text.Ticket.ask_type,
                                 chat_id=callback_query.from_user.id,
                                 reply_markup=get_type_of_statement_keyboard())
 
@@ -55,8 +52,7 @@ async def choice_start_statement(callback_query: CallbackQuery): # обрабо�
 async def choice_type_statement(message: Message, state: FSMContext):
     async with state.proxy() as data: # запоминаем тип заявления
         data[DATA_TYPE_KEY] = message.text
-    await message.answer(text=f'Вы выбрали тип заявления: {message.text}')
-    await message.answer(text='Далее выберите категорию заявления: ',
+    await message.answer(text=text.Ticket.ask_category,
                                         reply_markup=get_category_of_statement_keyboard())
     await Registration.next() # переходим к состоянию category
 
@@ -69,60 +65,44 @@ async def choice_is_category(message: Message, state: FSMContext):
     async with state.proxy() as data:
         data[DATA_CATEGORY_KEY] = message.text
 
-    await message.answer(text= f'Вы выбрали категорию {message.text}')
-    if message.text == Btn.army:
-        await message.answer(text=f'https://aiogram-birdi7.readthedocs.io/en/latest/examples/media_group.html\n'
-                                                 f'Вот ссылка на сайт вуц\n'
-                                                 f'Для подачи нового заявления нажмите кнопку "{Btn.make_ticket}"',
+    if message.text == text.StandartCats.army:
+        await message.answer(text=text.Ticket.army_links,
                              reply_markup=get_first_statement_button())
         await state.finish()
 
-    elif message.text == Btn.entry:
-        await message.answer(text='https://bmstu.ru/\n'
-                                                 'Вот ссылка на сайт приемной комиссии\n'
-                                                 f'Для подачи нового заявления нажмите кнопку "{Btn.make_ticket}"',
+    elif message.text == text.StandartCats.entry:
+        await message.answer(text=text.Ticket.entry_links,
                              reply_markup=get_first_statement_button())
         await state.finish()
 
     else:
-        await message.answer(text='Выберите как вы хотите задать вопрос(анонимно или нет)',
+        await message.answer(text=text.Ticket.ask_anonim,
                                         reply_markup=get_anonim_keyboard())
     await Registration.next()
+
 
 """
 Функция для состояние (выбора анонимно ли подается заявление). В зависимости от этого выбора в дальнейшем будет меняться
 маршрут состояний.
 """
 async def choice_is_anonim(message: Message, state: FSMContext):
-    if message.text == Btn.yes:
-        await message.answer(text=f'Вы выбрали остаться анонимным')
+    if message.text == text.Btn.yes:
         async with state.proxy() as data:
-            data[DATA_ANONIM_KEY] = True
+            data[DATA_ANONIM_KEY] = "True"
+
+        await message.answer(text=text.Ticket.ask_text, reply_markup=ReplyKeyboardRemove())
         await Registration.text_statement.set()
-        await message.answer(text='Введите текст обращения: ', reply_markup=ReplyKeyboardRemove())
 
-
-    elif message.text ==  Btn.no:
-        await message.answer(text=f'Вы выбрали отправить заявление не анонимно')
+    elif message.text == text.Btn.no:
         async with state.proxy() as data:
-            data[DATA_ANONIM_KEY] = False
+            data[DATA_ANONIM_KEY] = "False"
+
+        await message.answer(text=text.Ticket.ask_name, reply_markup=ReplyKeyboardRemove())
         await Registration.fio.set()
-        await message.answer(text='Введите ваше Фио: ', reply_markup=ReplyKeyboardRemove())
 
     else:
-        await message.answer(text='Выбран неправильный режим!\n'
-                                  'Выберите Да или Нет', reply_markup=get_anonim_keyboard())
+        await message.answer(text=text.Error.undefined_behaviour, reply_markup=get_anonim_keyboard())
 
-
-    #
-    # if message.text == Btn.yes:
-    #     await Registration.text_statement.set()
-    #     await message.answer(text='Введите текст обращения: ', reply_markup=ReplyKeyboardRemove())
-    #     await Registration.text_statement.set()
-    # else:
-    #     await Registration.fio.set()
-    #     await message.answer(text='Введите ваше Фио: ', reply_markup=ReplyKeyboardRemove())
-    #     await Registration.fio.set()
 
 """
 Функция для состояние (ввод Имени\Фио), пока что без валидности (проверки на правильность ввода)
@@ -133,8 +113,9 @@ async def input_fio(message: Message, state: FSMContext):
         data[DATA_FIO_KEY] = message.text
 
     await message.answer(text=f'Ваше фио: {message.text}')
-    await message.answer(text='Введите учебную группу')
+    await message.answer(text=text.Ticket.ask_group)
     await Registration.next()
+
 
 """
 Функция для состояние (ввод учебной группы), пока что без валидности (проверки на правильность ввода)
@@ -145,8 +126,9 @@ async def input_study_group(message:  Message, state: FSMContext):
         data[DATA_STUDY_GROUP_KEY] = message.text
 
     await message.answer(text=f'Ваша учебная группа: {message.text}')
-    await message.answer(text='Введите текст обращения')
+    await message.answer(text=text.Ticket.ask_text)
     await Registration.text_statement.set()
+
 
 """
 функция для последнего (на данный момент) состояния пользователя, ожидание ввода текста заявления.
@@ -158,12 +140,12 @@ async def input_text(message: Message, state: FSMContext, repo: Repo):
 
     await message.answer(text=f'Вы ввели {message.text}')
     user_data = await state.get_data()
-    all_data = '\n'.join([f"{key}: {value}" for key, value in user_data.items()])
-    # Пока тестовый вывод данные поданного заявления пользователю в чат
-    await message.answer(text= f'Ваши данные из фсм:\n'
-                                              f'{all_data}')
-    # await message.answer(text='Для создания нового заявление, нажмите кнопку "Начать заново"',
-    #                      reply_markup=get_first_statement_button())
+    # all_data = '\n'.join([f"{key}: {value}" for key, value in user_data.items()])
+    # # Пока тестовый вывод данные поданного заявления пользователю в чат
+    # await message.answer(text= f'Ваши данные из фсм:\n'
+    #                                           f'{all_data}')
+    await message.answer(text=text.Ticket.successful_sent,
+                         reply_markup=get_first_statement_button())
 
     ticket_id = None
     if data[DATA_ANONIM_KEY] == True:
@@ -359,9 +341,9 @@ async def comment_from_users_to_moderator_suggestions(message: Message, state: F
         logging.info('comment from users not reply')
 
 def register_user_handlers(dp: Dispatcher):
-    dp.register_message_handler(start, commands=["start"], state="*")
-    dp.register_message_handler(start, Text(equals='Назад'), state='*')
-    dp.register_message_handler(choice_start_statement, Text(equals='Подать заявление'), state='*')
+    dp.register_message_handler(start, commands=[text.Commands.start], state="*")
+    dp.register_message_handler(start, Text(text.Btn.back), state='*')
+    dp.register_message_handler(choice_start_statement, Text(text.Btn.make_ticket), state='*')
     dp.register_message_handler(choice_type_statement,  state=Registration.type)
     dp.register_message_handler(choice_is_category, state=Registration.category)
     dp.register_message_handler(choice_is_anonim, state=Registration.is_anonim)
