@@ -66,9 +66,30 @@ class Repo:
         self.conn.add(ticket)
         await self.conn.commit()
 
-        logger.info(f'add new ticket with id: {ticket.ticket_id=}')
 
-        return ticket
+        logger.info(f'add new ticket with id: {ticket.ticket_id}')
+
+
+        return ticket, ticket.ticket_id
+
+
+    async def get_user_id_from_ticket_id(self, ticket_id: int):
+        stmt = select(Ticket.tg_user_id).filter(Ticket.ticket_id == ticket_id)
+        result = await self.conn.execute(stmt)
+
+        id = result.scalar_one_or_none()
+        if id:
+            return int(id)
+        else:
+            logger.info(f'Пользователь с тикет айди = {ticket_id} не найден')
+            return None
+
+    # async def get_user_by_ticket_id(self, ticket_id: int) -> int:
+    #     res = await self.conn.execute(select(User.tg_id).filter(ticket_id == Ticket.ticket_id))
+    #
+    #     user = res.scalar_one_or_none()
+    #     return user
+
 
     async def get_users(self) -> Sequence[User]:
         res = await self.conn.execute(
@@ -87,6 +108,7 @@ class Repo:
         else:
             # logger.info(f"Пользователь с id {user_id} не найден.")
             return None
+
 
     async def update_user(
             self,

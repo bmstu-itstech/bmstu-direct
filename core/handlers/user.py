@@ -4,8 +4,9 @@ from aiogram import Dispatcher, Bot
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
+from sqlalchemy.util import await_only
 
-from core.states.Ticket_States import Registration
+from core.states.Ticket_States import Registration, Comments_Moderator
 from core.utils.keyboards import *
 from services.db.services.repository import Repo
 from config import config
@@ -18,8 +19,11 @@ bot = Bot(config.tg_bot.token)
 dp = Dispatcher(bot=bot)
 
 questions_chat = config.channel.questions_chat_id # чат для вопросов
+questions_comment = config.channel.questions_comment_id
 problems_chat = config.channel.problems_chat_id # чат для проблем
+problems_comment = config.channel.problems_comment_id
 suggestions_chat = config.channel.suggestions_chat_id # чат для предложений
+suggestions_comment = config.channel.suggestions_comment_id
 
 DATA_TYPE_KEY = 'type'
 DATA_CATEGORY_KEY = 'category'
@@ -90,18 +94,35 @@ async def choice_is_category(message: Message, state: FSMContext):
 маршрут состояний.
 """
 async def choice_is_anonim(message: Message, state: FSMContext):
-    async with state.proxy() as data:
-        data[DATA_ANONIM_KEY] = message.text
-
-    await message.answer(text= f'Вы выбрали {message.text}')
     if message.text == Btn.yes:
+        await message.answer(text=f'Вы выбрали остаться анонимным')
+        async with state.proxy() as data:
+            data[DATA_ANONIM_KEY] = True
         await Registration.text_statement.set()
         await message.answer(text='Введите текст обращения: ', reply_markup=ReplyKeyboardRemove())
-        await Registration.text_statement.set()
-    else:
+
+
+    elif message.text ==  Btn.no:
+        await message.answer(text=f'Вы выбрали отправить заявление не анонимно')
+        async with state.proxy() as data:
+            data[DATA_ANONIM_KEY] = False
         await Registration.fio.set()
         await message.answer(text='Введите ваше Фио: ', reply_markup=ReplyKeyboardRemove())
-        await Registration.fio.set()
+
+    else:
+        await message.answer(text='Выбран неправильный режим!\n'
+                                  'Выберите Да или Нет', reply_markup=get_anonim_keyboard())
+
+
+    #
+    # if message.text == Btn.yes:
+    #     await Registration.text_statement.set()
+    #     await message.answer(text='Введите текст обращения: ', reply_markup=ReplyKeyboardRemove())
+    #     await Registration.text_statement.set()
+    # else:
+    #     await Registration.fio.set()
+    #     await message.answer(text='Введите ваше Фио: ', reply_markup=ReplyKeyboardRemove())
+    #     await Registration.fio.set()
 
 """
 Функция для состояние (ввод Имени\Фио), пока что без валидности (проверки на правильность ввода)
@@ -141,38 +162,201 @@ async def input_text(message: Message, state: FSMContext, repo: Repo):
     # Пока тестовый вывод данные поданного заявления пользователю в чат
     await message.answer(text= f'Ваши данные из фсм:\n'
                                               f'{all_data}')
-    await message.answer(text='Для создания нового заявление, нажмите кнопку "Начать заново"',
-                         reply_markup=get_first_statement_button())
+    # await message.answer(text='Для создания нового заявление, нажмите кнопку "Начать заново"',
+    #                      reply_markup=get_first_statement_button())
 
-
-    if data[DATA_ANONIM_KEY] == Btn.yes:
+    ticket_id = None
+    if data[DATA_ANONIM_KEY] == True:
         await repo.update_user(tg_id=message.from_user.id, name='0', group='0')
-        await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
+        ticket = await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
                               text=data['text_statement'], type=data['type'], category=data['category'],
                               is_anonim=data['is_anonim'], is_closed='False')
-    elif data[DATA_ANONIM_KEY] == Btn.no:
+        ticket_id = ticket[1]
+    elif data[DATA_ANONIM_KEY] == False:
         await repo.update_user(tg_id=message.from_user.id, name=data['fio'], group=data['study_group'])
-        await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
+        ticket = await repo.add_ticket(tg_user_id=message.from_user.id, tg_link='0',
                               text=data['text_statement'], type=data['type'], category=data['category'],
                               is_anonim=data['is_anonim'], is_closed='False')
+        ticket_id = ticket[1]
 
 
     if data[DATA_TYPE_KEY] == Btn.question:
         await bot.send_message(chat_id=questions_chat, text= f'Новое заявление!\n'
-                                                        f'Его данные из фсм:\n'
-                                                        f'{all_data}' )
+                                                            f'Его данные из фсм:\n'
+                                                            f'{all_data}\n\n' 
+                                                            f'ID: {ticket_id}')
     elif data[DATA_TYPE_KEY] == Btn.problem:
         await bot.send_message(chat_id=problems_chat, text= f'Новое заявление!\n'
-                                                        f'Его данные из фсм:\n'
-                                                        f'{all_data}'  )
+                                                            f'Его данные из фсм:\n'
+                                                            f'{all_data}\n\n'
+                                                             f'ID: {ticket_id}')
     elif data[DATA_TYPE_KEY] == Btn.suggestion:
         await bot.send_message(chat_id=suggestions_chat, text= f'Новое заявление!\n'
-                                                        f'Его данные из фсм:\n'
-                                                        f'{all_data}'  )
-
+                                                               f'Его данные из фсм:\n'
+                                                               f'{all_data}\n\n'
+                                                                 f'ID: {ticket_id}')
+    await message.answer(text=f'Вы зарегистрировали новое заявление\n'
+                              f'Ожидайте ответ от модератора')
     await state.finish()
 
 
+last_mes = None
+reply_last_mes = None
+
+
+async def forward_comment_question(message: types.Message, repo: Repo, state: FSMContext):
+    logging.info('ЗАЯВЛЕНИЕ БЕЗ ФСМ ВОШЛО В ВПОРОСЫ')
+
+    if message.reply_to_message:  # Если сообщение — ответ на другое сообщение
+        post_message = message.reply_to_message
+        logging.info('СЛОВИЛ ОТВЕТ')
+
+    if message.from_user.is_bot:
+        logging.info(f"Ignored message from bot: {message.from_user.username}")
+        return  # Игнорируем сообщение, если оно от бота
+
+    if message.forward_from or message.forward_from_chat:
+        logging.info("Message was forwarded automatically.")
+        return
+    else:
+        logging.info("message was from moderator or user.")
+
+    try:
+        ticket_id = int(message.reply_to_message.text.split()[-1])
+        user_id = await repo.get_user_id_from_ticket_id(ticket_id=ticket_id)
+        await bot.send_message(chat_id=user_id, text=f'Вам пришел ответ от модератора на ваше заявление #{ticket_id}:\n'
+                                                     f' {message.text}')
+
+        global last_mes
+        last_mes = message.message_id
+
+        logging.info(f'message sent from moderator, lst_mes id == {last_mes}')
+
+    except Exception as e:
+        logging.error('error sending message(not reply or nothing else)')
+
+    await Comments_Moderator.question.set()
+
+
+async def forward_comment_problems(message: types.Message, repo: Repo, state: FSMContext):
+    logging.info('ЗАЯВЛЕНИЕ БЕЗ ФСМ ВОШЛО В ПРОБЛЕМЫ')
+
+    if message.reply_to_message:  # Если сообщение — ответ на другое сообщение
+        post_message = message.reply_to_message
+        logging.info('СЛОВИЛ ОТВЕТ')
+
+    if message.from_user.is_bot:
+        logging.info(f"Ignored message from bot: {message.from_user.username}")
+        return  # Игнорируем сообщение, если оно от бота
+
+    if message.forward_from or message.forward_from_chat:
+        logging.info("Message was forwarded automatically.")
+        return
+    else:
+        logging.info("message was from moderator or user.")
+
+    await Comments_Moderator.problems.set()
+    try:
+        ticket_id = int(message.reply_to_message.text.split()[-1])
+        user_id = await repo.get_user_id_from_ticket_id(ticket_id=ticket_id)
+        await bot.send_message(chat_id=user_id, text=f'Вам пришел ответ от модератора на ваше заявление #{ticket_id}:\n'
+                                                     f' {message.text}')
+
+        global last_mes
+        last_mes = message.message_id
+
+        logging.info(f'message sent from moderator, lst_mes id == {last_mes}')
+
+    except Exception as e:
+        logging.error('error sending message(not reply or nothing else)')
+
+
+async def forward_comment_suggestions(message: types.Message, repo: Repo, state: FSMContext):
+    logging.info('ЗАЯВЛЕНИЕ БЕЗ ФСМ ВОШЛО В ПРЕДЛОЖЕНИЯ')
+
+    if message.reply_to_message:  # Если сообщение — ответ на другое сообщение
+        post_message = message.reply_to_message
+        logging.info('СЛОВИЛ ОТВЕТ')
+
+    if message.from_user.is_bot:
+        logging.info(f"Ignored message from bot: {message.from_user.username}")
+        return  # Игнорируем сообщение, если оно от бота
+
+    if message.forward_from or message.forward_from_chat:
+        logging.info("Message was forwarded automatically.")
+        return
+    else:
+        logging.info("message was from moderator or user.")
+
+
+    try:
+        ticket_id = int(message.reply_to_message.text.split()[-1])
+        user_id = await repo.get_user_id_from_ticket_id(ticket_id=ticket_id)
+        await bot.send_message(chat_id=user_id, text=f'Вам пришел ответ от модератора на ваше заявление #{ticket_id}:\n'
+                                                     f' {message.text}')
+
+        global last_mes
+        last_mes = message.message_id
+
+        logging.info(f'message sent from moderator, lst_mes id == {last_mes}')
+
+    except Exception as e:
+        logging.error('error sending message(not reply or nothing else)')
+    await Comments_Moderator.suggestions.set()
+
+
+async def comment_from_users_to_moderator_question(message: Message, state: FSMContext):
+    logging.info('ЗАЯВЛЕНИЕ ПО ФСМ ВОШЛО В ВОПРОСЫ')
+
+    if message.reply_to_message:
+        logging.info('entry comment users')
+        reply_message = message.reply_to_message
+        reply_text = message.text
+
+        global last_mes
+        global reply_last_mes
+        await bot.send_message(chat_id=questions_comment, text=f'Пришло дополнение от пользователя:\n'
+                                                               f'{reply_text}', reply_to_message_id=last_mes)
+        last_mes = message.message_id
+        reply_last_mes = reply_message.message_id
+
+    else:
+        logging.info('comment from users not reply')
+
+async def comment_from_users_to_moderator_problems(message: Message, state: FSMContext):
+    logging.info('ЗАЯВЛЕНИЕ ПО ФСМ ВОШЛО В ПРОБЛЕМЫ')
+
+    if message.reply_to_message:
+        logging.info('entry comment users')
+        reply_message = message.reply_to_message
+        reply_text = message.text
+
+        global last_mes
+        global reply_last_mes
+        await bot.send_message(chat_id=problems_comment, text=f'Пришло дополнение от пользователя:\n'
+                                                               f'{reply_text}', reply_to_message_id=last_mes)
+        last_mes = message.message_id
+        reply_last_mes = reply_message.message_id
+
+    else:
+        logging.info('comment from users not reply')
+
+async def comment_from_users_to_moderator_suggestions(message: Message, state: FSMContext):
+    logging.info('ЗАЯВЛЕНИЕ ПО ФСМ ВОШЛО В ПРЕДЛОЖЕНИЯ')
+    if message.reply_to_message:
+        logging.info('entry comment users')
+        reply_message = message.reply_to_message
+        reply_text = message.text
+
+        global last_mes
+        global reply_last_mes
+        await bot.send_message(chat_id=suggestions_comment, text=f'Пришло дополнение от пользователя:\n'
+                                                               f'{reply_text}', reply_to_message_id=last_mes)
+        last_mes = message.message_id
+        reply_last_mes = reply_message.message_id
+
+    else:
+        logging.info('comment from users not reply')
 
 def register_user_handlers(dp: Dispatcher):
     dp.register_message_handler(start, commands=["start"], state="*")
@@ -185,3 +369,12 @@ def register_user_handlers(dp: Dispatcher):
     dp.register_message_handler(input_study_group, state=Registration.study_group)
     dp.register_message_handler(input_text, state=Registration.text_statement)
 
+    dp.register_message_handler(forward_comment_question, chat_id=questions_comment, state='*')
+    # dp.register_message_handler(comment_from_users_to_moderator_question, state='*') Без фсм машины, если только категория вопросы работает до глубины 2
+    dp.register_message_handler(comment_from_users_to_moderator_question, state = Comments_Moderator.question)
+
+    dp.register_message_handler(forward_comment_problems, chat_id=problems_comment, state='*')
+    dp.register_message_handler(comment_from_users_to_moderator_problems, state=Comments_Moderator.problems)
+
+    dp.register_message_handler(forward_comment_suggestions, chat_id = suggestions_comment, state='*')
+    dp.register_message_handler(comment_from_users_to_moderator_suggestions, state=Comments_Moderator.suggestions)
