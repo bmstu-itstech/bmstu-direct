@@ -1,61 +1,73 @@
-import enum
+import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, BigInteger, Integer, DateTime, Text, Boolean, Enum, Sequence, BOOLEAN
-from sqlalchemy.orm import mapped_column, Mapped
-from sqlalchemy.sql.sqltypes import NullType
+from sqlalchemy import Column, BigInteger, DateTime, Text, Boolean, Enum, Sequence
 
+from core import domain
 from services.db.base import Base
 
 
-class BaseCommon(Base):
+class BaseModel(Base):
     __abstract__ = True
 
-    # id = Column(Integer, primary_key=True)
     created_on = Column(DateTime, default=datetime.now)
     updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    pass
 
 
-"""
-Енамы пока что нигде не используются, сделано на будущее. )))))
-"""
-class IssueTypes(str, Enum):
-    QUESTIONS = 'questions'
-    PROBLEMS = 'problems'
-    SUGGESTIONS = 'suggestions'
-
-
-class IssueCategory(str, Enum):
-    STUDY = 'food'
-    HOSTEL = 'hostel'
-    FOOD = 'food'
-    MEDICINE = 'medicine'
-    ARMY = 'army'
-    ENTRY = 'entry'
-    DOCUMENTS = 'documents'
-    STIPEND = 'stipend'
-    EXTRACURRICULAR_ACTIVITIES = 'extracurricular_activities'
-    OTHER = 'other'
-
-
-class User(BaseCommon):
+class User(BaseModel):
     __tablename__ = "users"
 
-    tg_id = Column(BigInteger, primary_key=True)
-    name = Column(Text, nullable=True, default=NullType)
-    group = Column(Text, nullable=True, default=NullType)
-    role = Column(Integer, default=0, nullable=False)
+    chat_id = Column(BigInteger,        primary_key=True)
+    role    = Column(Enum(domain.Role), nullable=False)
+
+    @classmethod
+    def from_domain(cls, user: domain.User) -> "User":
+        return User(chat_id=user.chat_id, role=user.role)
+
+    def to_domain(self) -> domain.User:
+        return domain.User(chat_id=self.chat_id, role=self.role)
 
 
-class Ticket(BaseCommon):
+class Ticket(BaseModel):
     __tablename__ = 'ticket'
 
-    ticket_id = Column(Integer, Sequence('ticket_id', start=1, increment=1), primary_key=True)
-    tg_user_id = Column(BigInteger, nullable=False)
-    tg_link = Column(Text, nullable=False)
-    text = Column(Text, nullable=False)
-    type = Column(Text, nullable=False)
-    category = Column(Text, nullable=False)
-    is_anonim = Column(Text, default=1, nullable=False)
-    is_closed = Column(Text, default=0, nullable=False)
+    id = Column(BigInteger, Sequence("id", start=1, increment=1), primary_key=True)
+
+    owner_chat_id = Column(BigInteger,            nullable=False)
+    text          = Column(Text,                  nullable=False)
+    issue         = Column(Enum(domain.Issue),    nullable=False)
+    category      = Column(Enum(domain.Category), nullable=False)
+    anonym        = Column(Boolean,               nullable=False)
+    full_name     = Column(Text,                  nullable=True)
+    study_group   = Column(Text,                  nullable=True)
+    status        = Column(Enum(domain.Status),   nullable=False)
+
+    @classmethod
+    def from_domain(cls, ticket: domain.Ticket) -> "Ticket":
+        return Ticket(
+            owner_chat_id = ticket.owner_chat_id,
+            text          = ticket.text,
+            issue         = ticket.issue,
+            category      = ticket.category,
+            anonym        = ticket.owner is None,
+            full_name     = ticket.owner.full_name if ticket.owner is not None else None,
+            study_group   = ticket.owner.study_group if ticket.owner is not None else None,
+            status        = ticket.status,
+        )
+
+    def to_domain(self) -> domain.TicketRecord:
+        owner = None
+        if not self.anonym:
+            owner = domain.Student(
+                self.full_name,
+                self.study_group,
+            )
+        return domain.TicketRecord(
+            id            = self.id,
+            owner_chat_id = self.owner_chat_id,
+            text          = self.text,
+            issue         = domain.Issue(self.issue),
+            category      = domain.Category(self.category),
+            owner         = owner,
+            status        = domain.Status(self.status),
+        )
