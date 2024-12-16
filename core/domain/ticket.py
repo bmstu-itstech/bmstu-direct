@@ -11,6 +11,9 @@ class Ticket:
     # ID чата с пользователем, откуда поступило заявление.
     owner_chat_id: int
 
+    # ID в личных сообщениях.
+    source_message_id: int
+
     # Тип заявление пользователя: например, вопрос или проблема.
     issue: Issue
 
@@ -27,6 +30,7 @@ class Ticket:
 
     # Статус заявления: открыто или закрыто.
     status: Status
+
 
 @dataclass
 class TicketRecord(Ticket):

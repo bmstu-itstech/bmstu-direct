@@ -46,7 +46,7 @@ async def send_create_ticket(message: Message):
     await states.Registration.create_ticket.set()
 
 
-@dp.message_handler(state=states.Registration.create_ticket)
+@dp.message_handler(state=states.Registration.create_ticket, regexp=texts.buttons.create_ticket)
 async def handle_create_ticket(message: Message):
     await send_choice_issue(message)
 
@@ -105,6 +105,7 @@ async def send_choice_privacy(message: Message):
         reply_markup=keyboards.choice_privacy_keyboard(),
     )
     await states.Registration.choice_privacy.set()
+
 
 @dp.message_handler(state=states.Registration.choice_privacy)
 async def handle_choice_privacy(message: Message, state: FSMContext):
@@ -223,6 +224,7 @@ async def save_ticket(message: Message, state: FSMContext, repos: Storage):
             )
         ticket = domain.Ticket(
             owner_chat_id=message.chat.id,
+            source_message_id=message.message_id,
             issue=data[DATA_ISSUE_KEY],
             category=data[DATA_CATEGORY_KEY],
             text=data[DATA_TEXT_KEY],
@@ -230,12 +232,12 @@ async def save_ticket(message: Message, state: FSMContext, repos: Storage):
             status=domain.Status.OPENED,
         )
     saved = await repos.save_ticket(ticket)
-    await send_ticket(saved)
+    await send_ticket(saved, repos)
     await send_ticket_was_sent(message, saved.id)
 
 
-async def send_ticket(ticket: TicketRecord):
-    await bot.send_message(config.channel_chat_id,
+async def send_ticket(ticket: TicketRecord, repos: Storage):
+    sent = await bot.send_message(config.channel_chat_id,
         texts.ticket.ticket_channel(ticket),
     )
 
@@ -282,4 +284,3 @@ def map_button_to_category(btn: str) -> domain.Category | None:
         case texts.buttons.other:
             return domain.Category.OTHER
     return None
-
