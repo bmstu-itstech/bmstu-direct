@@ -1,4 +1,7 @@
+import pybars
 from core.domain import TicketRecord
+from common.repository import compiler
+
 
 greet = "\n".join((
     "👋 Привет, Бауманец!",
@@ -43,18 +46,27 @@ def ticket_sent(ticket_id: int) -> str:
     return f"Твоё обращение отправлено! Ему присвоили номер #{ticket_id}"
 
 
+ticket_channel_template = compiler.compile("""
+Обращение #{{ticket.id}}
+=================================
+Статус: {{as_tag ticket.status}}
+Тип заявления: {{as_tag ticket.issue}}
+Категория: {{as_tag ticket.category}}
+Заявитель: {{#if ticket.owner}}{{ticket.owner}}{{else}}анонимно{{/if}}
+=================================
+{{ticket.text}}
+""")
+
+
 def ticket_channel(ticket: TicketRecord) -> str:
-    return "\n".join((
-        f"Обращение #{ticket.id}",
-         "=================================",
-        f"Статус: {as_tag(ticket.status)}",
-        f"Тип заявления: {as_tag(ticket.issue)}",
-        f"Категория: {as_tag(ticket.category)}",
-        f"Заявитель: {ticket.owner if ticket.owner is not None else 'анонимно'}",
-         "=================================",
-        ticket.text,
-    ))
+    return ticket_channel_template(
+        {
+            "ticket": ticket,
+        },
+        helpers={"as_tag": as_tag}
+    )
 
 
-def as_tag(s: str) -> str:
+def as_tag(this, s) -> str:
     return "#" + s.lower().replace(" ", "")
+

@@ -7,7 +7,7 @@ create_ticket = "Подать обращение"
 question    = "Вопрос"
 problem     = "Проблема"
 suggestion  = "Предложение"
-issues      = ( question, problem, suggestion )
+issues      = (question, problem, suggestion)
 
 study       = "Учёба"
 dormitory   = "Общежитие"
@@ -24,17 +24,9 @@ categories  = (
     admission, documents, scholarship, electives, other
 )
 
-
-
-
-
-
-
 make_ticket = "Создать обращение"
 help        = "Помощь"
 my_tickets  = "Мои обращения"
-yes         = "Да"
-no          = "Нет"
 
 # admin_buttons
 admin_panel     = "Админ-панель"
