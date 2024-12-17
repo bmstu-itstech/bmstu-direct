@@ -58,9 +58,9 @@ async def handle_student_answer(message: Message, state: FSMContext, repos: Stor
     if not message.reply_to_message:
         await message.answer(texts.errors.no_reply)
         return
-    ticket_id = await repos.chat_ticket_id(message.chat.id)
-    replied_message = await repos.message_where(
-        ticket_id=ticket_id,
+    ticket_ids = await repos.chat_ticket_ids(message.chat.id)
+    replied_message = await repos.message_by_id(
+        ticket_ids=ticket_ids,
         owner_message_id=message.reply_to_message.message_id,
     )
     await send_student_answer(message, repos, replied_message, message.text)

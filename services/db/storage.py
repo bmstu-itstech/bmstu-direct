@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import domain
@@ -92,14 +92,15 @@ class Storage:
             raise MessageNotFound(_id)
         return model.to_domain()
 
-    async def message_where(self, **kwargs) -> domain.Message:
-        """
-        Возвращает первое сообщение с данными полями.
-        Вызывает исключение MessageNotFound, если сообщения не в БД.
-        """
+    async def message_by_id(self, ticket_ids: list[int], owner_message_id: int) -> domain.Message:
         stmt = \
             select(models.GroupMessage).    \
-            filter_by(**kwargs)
+            where(
+                and_(
+                    models.GroupMessage.ticket_id.in_(ticket_ids),
+                    models.GroupMessage.owner_message_id == owner_message_id,
+                )
+            )
         result = await self._db.execute(stmt)
         model = result.scalars().first()
         if not model:
@@ -135,12 +136,12 @@ class Storage:
             raise TicketNotFoundException(_id)
         return ticket_id
 
-    async def chat_ticket_id(self, chat_id: int) -> int:
+    async def chat_ticket_ids(self, chat_id: int) -> list[int]:
         stmt = \
             select(models.Ticket.id). \
             filter_by(owner_chat_id=chat_id)
         result = await self._db.execute(stmt)
-        ticket_id = result.scalar_one_or_none()
-        if not ticket_id:
+        ticket_ids = list(result.scalars().all())
+        if not ticket_ids:
             raise TicketNotFoundException(chat_id)
-        return ticket_id
+        return ticket_ids
