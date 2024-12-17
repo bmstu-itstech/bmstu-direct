@@ -11,8 +11,11 @@ class Ticket:
     # ID чата с пользователем, откуда поступило заявление.
     owner_chat_id: int
 
-    # ID в личных сообщениях.
-    source_message_id: int
+    # ID сообщения тикета в канале.
+    channel_message_id: int
+
+    # ID сообщения тикета в группе.
+    group_message_id: int | None
 
     # Тип заявление пользователя: например, вопрос или проблема.
     issue: Issue

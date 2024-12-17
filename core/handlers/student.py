@@ -33,7 +33,7 @@ async def send_start(message: Message, state: FSMContext):
     await state.finish()
     await message.answer(
         texts.ticket.greet,
-        reply_markup = ReplyKeyboardRemove(),
+        reply_markup=ReplyKeyboardRemove(),
     )
     await send_create_ticket(message)
 
@@ -164,7 +164,7 @@ async def send_input_study_group(message: Message):
 @dp.message_handler(state=states.Registration.input_study_group)
 async def handle_input_study_group(message: Message, state: FSMContext):
     if not re.match(r"[А-Я]{1,3}1?[0-9]-[1-9]{2,3}[АБМ]?", message.text):
-        return await send_input_full_name_invalid(message)
+        return await send_input_study_group_invalid(message)
     study_group = message.text
     async with state.proxy() as data:
         data[DATA_STUDY_GROUP_KEY] = study_group
@@ -224,7 +224,8 @@ async def save_ticket(message: Message, state: FSMContext, repos: Storage):
             )
         ticket = domain.Ticket(
             owner_chat_id=message.chat.id,
-            source_message_id=message.message_id,
+            channel_message_id=message.message_id,
+            group_message_id=None,
             issue=data[DATA_ISSUE_KEY],
             category=data[DATA_CATEGORY_KEY],
             text=data[DATA_TEXT_KEY],
@@ -237,7 +238,8 @@ async def save_ticket(message: Message, state: FSMContext, repos: Storage):
 
 
 async def send_ticket(ticket: TicketRecord, repos: Storage):
-    sent = await bot.send_message(config.channel_chat_id,
+    sent = await bot.send_message(
+        config.channel_chat_id,
         texts.ticket.ticket_channel(ticket),
     )
 

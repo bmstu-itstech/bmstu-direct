@@ -1,6 +1,6 @@
 from .category import Category
 from .issue import Issue
-from .message import MessageID, MessagePair
+from .message import Message
 from .role import Role
 from .status import Status
 from .student import Student
@@ -10,8 +10,7 @@ from .user import User
 __all__ = [
     "Category",
     "Issue",
-    "MessageID",
-    "MessagePair",
+    "Message",
     "Role",
     "Status",
     "Student",
