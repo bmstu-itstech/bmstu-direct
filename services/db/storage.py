@@ -134,3 +134,13 @@ class Storage:
         if not ticket_id:
             raise TicketNotFoundException(_id)
         return ticket_id
+
+    async def chat_ticket_id(self, chat_id: int) -> int:
+        stmt = \
+            select(models.Ticket.id). \
+            filter_by(owner_chat_id=chat_id)
+        result = await self._db.execute(stmt)
+        ticket_id = result.scalar_one_or_none()
+        if not ticket_id:
+            raise TicketNotFoundException(chat_id)
+        return ticket_id
