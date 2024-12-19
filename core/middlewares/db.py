@@ -14,4 +14,4 @@ class DbMiddleware(LifetimeControllerMiddleware):
     async def pre_process(self, obj, data, *args):
         db: AsyncSession = self.pool()
         data["db"] = db
-        data["repos"] = Storage(db)
+        data["store"] = Storage(db)

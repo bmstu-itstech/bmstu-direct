@@ -17,23 +17,23 @@ logger = logging.getLogger(__name__)
 
 
 @dp.message_handler(IDFilter(chat_id=config.comment_chat_id), ForwardedMessageFilter(is_forwarded=True))
-async def handle_ticket_published(message: Message, state: FSMContext, repos: Storage):
+async def handle_ticket_published(message: Message, state: FSMContext, store: Storage):
     ticket_id = extract_ticket_id(message.text)
-    await repos.update_ticket(ticket_id, group_message_id=message.message_id)
+    await store.update_ticket(ticket_id, group_message_id=message.message_id)
 
 
 @dp.message_handler(IDFilter(chat_id=config.comment_chat_id), IsReplyFilter(is_reply=True))
-async def handle_moderator_answer(message: Message, state: FSMContext, repos: Storage):
+async def handle_moderator_answer(message: Message, state: FSMContext, store: Storage):
     _id = message.__dict__["_values"]["message_thread_id"]
-    ticket_id = await repos.message_ticket_id(_id)
-    await send_moderator_answer(message, repos, ticket_id, message.text)
+    ticket_id = await store.message_ticket_id(_id)
+    await send_moderator_answer(message, store, ticket_id, message.text)
 
 
-async def send_moderator_answer(message: Message, repos: Storage, ticket_id: int, answer: str):
-    ticket = await repos.ticket(ticket_id)
+async def send_moderator_answer(message: Message, store: Storage, ticket_id: int, answer: str):
+    ticket = await store.ticket(ticket_id)
     reply_to_id = None
     try:
-        replied_message = await repos.message_id(message.reply_to_message.message_id)
+        replied_message = await store.message_id(message.reply_to_message.message_id)
         reply_to_id = replied_message.owner_message_id
     except MessageNotFound:
         logger.info(f"Message {reply_to_id} to reply not found")
@@ -42,7 +42,7 @@ async def send_moderator_answer(message: Message, repos: Storage, ticket_id: int
         f"Ответ: {answer}",
         reply_to_message_id=reply_to_id,
     )
-    await repos.save_message(
+    await store.save_message(
         domain.Message(
             chat_id=message.chat.id,
             message_id=message.message_id,
@@ -54,25 +54,25 @@ async def send_moderator_answer(message: Message, repos: Storage, ticket_id: int
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state="*")
-async def handle_student_answer(message: Message, state: FSMContext, repos: Storage):
+async def handle_student_answer(message: Message, state: FSMContext, store: Storage):
     if not message.reply_to_message:
         await message.answer(texts.errors.no_reply)
         return
-    ticket_ids = await repos.chat_ticket_ids(message.chat.id)
-    replied_message = await repos.message_by_id(
+    ticket_ids = await store.chat_ticket_ids(message.chat.id)
+    replied_message = await store.message_by_id(
         ticket_ids=ticket_ids,
         owner_message_id=message.reply_to_message.message_id,
     )
-    await send_student_answer(message, repos, replied_message, message.text)
+    await send_student_answer(message, store, replied_message, message.text)
 
 
-async def send_student_answer(message: Message, repos: Storage, replied_message: domain.Message, answer: str):
+async def send_student_answer(message: Message, store: Storage, replied_message: domain.Message, answer: str):
     sent = await bot.send_message(
         config.comment_chat_id,
         answer,
         reply_to_message_id=replied_message.message_id,
     )
-    await repos.save_message(
+    await store.save_message(
         domain.Message(
             chat_id=sent.chat.id,
             message_id=sent.message_id,

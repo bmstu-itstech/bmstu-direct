@@ -24,10 +24,6 @@ class MessageNotFound(Exception):
         super().__init__(f"message not found: id={_id}")
 
 
-# _message_pairs: dict[domain.MessageID, domain.MessageID] = dict()
-# _message_tickets: dict[domain.MessageID, int] = dict()
-
-
 class Storage:
     _db: AsyncSession
 
@@ -106,23 +102,6 @@ class Storage:
         if not model:
             raise MessageNotFound(0)
         return model.to_domain()
-
-    # async def update_message(self, _id: int, **kwargs) -> domain.Message:
-    #     stmt = select(models.GroupMessage).filter_by(_id=_id)
-    #     result = await self._db.execute(stmt)
-    #     model = result.scalar_one_or_none()
-    #     if not model:
-    #         raise MessageNotFound(_id)
-    #     for key, value in kwargs.items():
-    #         if not hasattr(models.GroupMessage, key):
-    #             raise ValueError(f'Class `models.GroupMessage` doesn\'t have argument {key}')
-    #     stmt = \
-    #         update(models.GroupMessage).      \
-    #         filter_by(_id=_id).    \
-    #         values(**kwargs)
-    #     await self._db.execute(stmt)
-    #     await self._db.commit()
-    #     return model.to_domain()
 
     async def message_ticket_id(self, _id: int) -> int:
         stmt = \

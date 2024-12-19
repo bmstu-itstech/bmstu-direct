@@ -201,9 +201,9 @@ async def send_choice_approve(message: Message):
 
 
 @dp.message_handler(state=states.Registration.choice_approve)
-async def handle_choice_approve(message: Message, state: FSMContext, repos: Storage):
+async def handle_choice_approve(message: Message, state: FSMContext, store: Storage):
     if message.text == texts.buttons.yes:
-        return await save_ticket(message, state, repos)
+        return await save_ticket(message, state, store)
     if message.text == texts.buttons.no:
         return await send_choice_issue(message)
     await send_choice_approve_invalid(message)
@@ -214,7 +214,7 @@ async def send_choice_approve_invalid(message: Message):
     await send_choice_approve(message)
 
 
-async def save_ticket(message: Message, state: FSMContext, repos: Storage):
+async def save_ticket(message: Message, state: FSMContext, store: Storage):
     async with state.proxy() as data:
         owner = None
         if data[DATA_ANONYM_KEY]:
@@ -232,13 +232,13 @@ async def save_ticket(message: Message, state: FSMContext, repos: Storage):
             owner=owner,
             status=domain.Status.OPENED,
         )
-    saved = await repos.save_ticket(ticket)
-    await send_ticket(saved, repos)
+    saved = await store.save_ticket(ticket)
+    await send_ticket(saved)
     await send_ticket_was_sent(message, saved.id)
 
 
-async def send_ticket(ticket: TicketRecord, repos: Storage):
-    sent = await bot.send_message(
+async def send_ticket(ticket: TicketRecord):
+    await bot.send_message(
         config.channel_chat_id,
         texts.ticket.ticket_channel(ticket),
     )
