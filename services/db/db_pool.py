@@ -5,14 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import sessionmaker
 
-from services.db.models import Base, BaseCommon
+from services.db.models import Base, BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-async def create_db_pool(user, password, address, name, echo):
+async def create_db_pool(user, password, host, port, name, echo):
     engine = create_async_engine(
-        f"postgresql+asyncpg://{user}:{password}@{address}/{name}",
+        f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{name}",
         echo=echo,
         future=True,
         poolclass=NullPool,

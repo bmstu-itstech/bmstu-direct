@@ -677,6 +677,29 @@ files = [
 ]
 
 [[package]]
+name = "pybars3"
+version = "0.9.7"
+description = "Handlebars.js templating for Python 3 and 2"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pybars3-0.9.7.tar.gz", hash = "sha256:6ac847e905e53b9c5b936af112c910475e27bf767f79f4528c16f9af1ec0e252"},
+]
+
+[package.dependencies]
+PyMeta3 = ">=0.5.1"
+
+[[package]]
+name = "pymeta3"
+version = "0.5.1"
+description = "Pattern-matching language based on OMeta for Python 3 and 2"
+optional = false
+python-versions = "*"
+files = [
+    {file = "PyMeta3-0.5.1.tar.gz", hash = "sha256:18bda326d9a9bbf587bfc0ee0bc96864964d78b067288bcf55d4d98681d05bcb"},
+]
+
+[[package]]
 name = "python-dotenv"
 version = "1.0.1"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -895,4 +918,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "72ecc348d94dde8a58943bfe02251351b8a76150aad252be9401a4ac1e9f312a"
+content-hash = "d97d348fb4af95bf3d2a5f5e71ba5985f869333a4ebc08b102d1b03f86dfce76"

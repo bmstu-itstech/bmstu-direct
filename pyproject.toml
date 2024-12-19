@@ -16,6 +16,7 @@ aiogram = "2.15"
 sqlalchemy = "^2.0.36"
 python-dotenv = "^1.0.1"
 asyncpg = "^0.30.0"
+pybars3 = "^0.9.7"
 
 
 [build-system]
