@@ -43,3 +43,4 @@ docker compose -f docker-compose.yml --env-file .env up --build
         └── services
             └── repository.py  - сам интерфейс для взаимодействия с бд. именно там создаются все методы для работы с данными. пример оставил
 ```
+
