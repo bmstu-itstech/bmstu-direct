@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from attr import dataclass
 
 from core.domain.category import Category
@@ -33,6 +35,9 @@ class Ticket:
 
     # Статус заявления: открыто или закрыто.
     status: Status
+
+    # Время открытия тикета
+    opened_at: datetime | None
 
 
 @dataclass

@@ -1,5 +1,7 @@
 FROM python:3.10.15
 
+ENV TZ=Europe/Moscow
+
 WORKDIR /bot
 RUN pip install --upgrade pip
 COPY requirements.txt .

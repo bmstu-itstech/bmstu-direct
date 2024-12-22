@@ -231,6 +231,7 @@ async def save_ticket(message: Message, state: FSMContext, store: Storage):
             text=data[DATA_TEXT_KEY],
             owner=owner,
             status=domain.Status.OPENED,
+            opened_at=None,
         )
     saved = await store.save_ticket(ticket)
     await send_ticket(saved)
