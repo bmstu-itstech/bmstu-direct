@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pybars
 from core.domain import TicketRecord
 from common.repository import compiler
@@ -29,17 +31,21 @@ choice_privacy = "\n".join((
     "Конфиденциальность – наш лучший друг после вас!"
 ))
 
-input_full_name = \
-    "Введи своё ФИО полностью, чтобы мы знали, с кем в случае чего можно было связаться."
+input_full_name = "\n".join((
+    "✍️ Напиши своё полное ФИО",
+    "Пожалуйста, укажи имя и фамилию, и если есть — добавь отчество.",
+    "Пример: Иванов Иван Инванович"
+))
+
 
 input_study_group = \
-    "Введи свою учебную группу в формате ИУ13-13Б."
+    "🎓 Напиши номер своей учебной группы. Формат ввода: ИУ13-13Б."
 
 input_text = \
-    "Расскажи, в чём суть твоего обращения."
+    "📩 Опиши ниже свой вопрос или проблему:"
 
 choice_approve = \
-    "Подтверждаешь введённые данные?"
+    "👀 Проверь, всё ли введено правильно. Подтверждаешь данные?"
 
 
 def ticket_sent(ticket_id: int) -> str:
@@ -49,11 +55,12 @@ def ticket_sent(ticket_id: int) -> str:
 ticket_channel_template = compiler.compile("""
 Обращение #{{ticket.id}}
 =================================
-Статус: {{as_tag ticket.status}}
-Тип заявления: {{as_tag ticket.issue}}
-Категория: {{as_tag ticket.category}}
-Заявитель: {{#if ticket.owner}}{{ticket.owner}}{{else}}анонимно{{/if}}
+📌 Тип: {{as_tag ticket.issue}}
+📂 Категория: {{as_tag ticket.category}}
+👤 Отправитель: {{#if ticket.owner}}{{ticket.owner}}{{else}}анонимно{{/if}}
+🕒 Дата отправки: {{as_date ticket.opened_at}}
 =================================
+📩 Текст обращения:
 {{ticket.text}}
 """)
 
@@ -63,10 +70,16 @@ def ticket_channel(ticket: TicketRecord) -> str:
         {
             "ticket": ticket,
         },
-        helpers={"as_tag": as_tag}
+        helpers={
+            "as_tag": as_tag,
+            "as_date": as_date,
+        }
     )
 
 
 def as_tag(this, s) -> str:
     return "#" + s.lower().replace(" ", "")
 
+
+def as_date(this, dt: datetime, date_format: str = None) -> str:
+    return datetime.strftime(dt, date_format or "%d.%m.%Y %H:%M:%S")

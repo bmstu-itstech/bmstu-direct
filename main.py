@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 async def main():
-    if os.path.isfile('bot.log'):
-        os.remove('bot.log')
+    if os.path.isfile("bot.log"):
+        os.remove("bot.log")
 
     logging.basicConfig(
         level=logging.INFO,
