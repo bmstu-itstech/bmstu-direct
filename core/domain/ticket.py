@@ -36,11 +36,11 @@ class Ticket:
     # Статус заявления: открыто или закрыто.
     status: Status
 
-    # Время открытия тикета
-    opened_at: datetime | None
-
 
 @dataclass
 class TicketRecord(Ticket):
     # Уникальный ID тикета.
     id: int
+
+    # Время открытия тикета
+    opened_at: datetime | None
