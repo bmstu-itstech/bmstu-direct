@@ -7,7 +7,7 @@ create_ticket = "Подать обращение"
 question    = "Вопрос"
 problem     = "Проблема"
 suggestion  = "Предложение"
-issues      = (question, problem, suggestion)
+issues      = (problem, question, suggestion)
 
 study       = "Учёба"
 dormitory   = "Общежитие"

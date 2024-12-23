@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from attr import dataclass
 
 from core.domain.category import Category
@@ -39,3 +41,6 @@ class Ticket:
 class TicketRecord(Ticket):
     # Уникальный ID тикета.
     id: int
+
+    # Время открытия тикета
+    opened_at: datetime | None

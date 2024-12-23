@@ -75,6 +75,7 @@ class Ticket(BaseModel):
             category           = domain.Category(self.category),
             owner              = owner,
             status             = domain.Status(self.status),
+            opened_at          = self.created_on,
         )
 
 
