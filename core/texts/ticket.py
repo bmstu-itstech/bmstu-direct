@@ -75,7 +75,7 @@ answer_student_template = compiler.compile("\n".join((
 )))
 
 ticket_sent_template = compiler.compile("\n".join((
-    "Твоё обращение отправлено! Ему присвоили номер <code>{{ticket_id}}"
+    "Твоё обращение отправлено! Ему присвоили номер <code>{{as_ticket_id ticket_id}}</code>"
 )))
 
 
