@@ -1,24 +1,24 @@
 yes  = "Да"
 no   = "Нет"
-back = "Назад"
+back = "🔙 Назад"
 
 create_ticket = "Подать обращение"
 
-question    = "Вопрос"
 problem     = "Проблема"
+question    = "Вопрос"
 suggestion  = "Предложение"
 issues      = (problem, question, suggestion)
 
-study       = "Учёба"
-dormitory   = "Общежитие"
-food        = "Питание"
-medicine    = "Медицина"
-military    = "Военный учебный центр"
-admission   = "Поступление"
-documents   = "Документы"
-scholarship = "Стипендия и выплаты"
-electives   = "Внеучебная деятельность"
-other       = "Другое"
+study       = "🎓 Учёба"
+dormitory   = "🏠 Общежитие"
+food        = "🍽️ Питание"
+medicine    = "🏥 Медицина"
+military    = "🛡️ Военный учебный центр"
+admission   = "🏫 Поступление"
+documents   = "📄 Документы"
+scholarship = "💳 Стипендия и выплаты"
+electives   = "👥 Внеучебная деятельность"
+other       = "🌐 Другое"
 categories  = (
     study, dormitory, food, medicine, military,
     admission, documents, scholarship, electives, other

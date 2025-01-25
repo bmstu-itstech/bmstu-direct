@@ -2,7 +2,7 @@ import logging
 import re
 
 from aiogram.dispatcher import FSMContext
-from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram.types import Message, ReplyKeyboardRemove, ParseMode
 
 from core import texts
 from core import states
@@ -34,6 +34,7 @@ async def send_start(message: Message, state: FSMContext):
     await message.answer(
         texts.ticket.greet,
         reply_markup=ReplyKeyboardRemove(),
+        parse_mode=ParseMode.HTML,
     )
     await send_create_ticket(message)
 
@@ -42,6 +43,7 @@ async def send_create_ticket(message: Message):
     await message.answer(
         texts.ticket.create_ticket,
         reply_markup=keyboards.create_ticket_keyboard(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.create_ticket.set()
 
@@ -55,6 +57,7 @@ async def send_choice_issue(message: Message):
     await message.answer(
         texts.ticket.choice_issue,
         reply_markup=keyboards.choice_issue_keyboard(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.choice_issue.set()
 
@@ -70,7 +73,9 @@ async def handle_choice_issue(message: Message, state: FSMContext):
 
 
 async def send_choice_issue_invalid(message: Message):
-    await message.answer(texts.errors.invalid_input_button)
+    await message.answer(
+       texts.errors.invalid_input_button,
+    )
     await send_choice_issue(message)
 
 
@@ -78,6 +83,7 @@ async def send_choice_category(message: Message):
     await message.reply(
         texts.ticket.choice_category,
         reply_markup=keyboards.choice_category_keyboard(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.choice_category.set()
 
@@ -103,6 +109,7 @@ async def send_choice_privacy(message: Message):
     await message.answer(
         texts.ticket.choice_privacy,
         reply_markup=keyboards.choice_privacy_keyboard(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.choice_privacy.set()
 
@@ -134,6 +141,7 @@ async def send_input_full_name(message: Message):
     await message.answer(
         texts.ticket.input_full_name,
         reply_markup=ReplyKeyboardRemove(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.input_full_name.set()
 
@@ -157,6 +165,7 @@ async def send_input_study_group(message: Message):
     await message.answer(
         texts.ticket.input_study_group,
         reply_markup=ReplyKeyboardRemove(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.input_study_group.set()
 
@@ -180,6 +189,7 @@ async def send_input_text(message: Message):
     await message.answer(
         texts.ticket.input_text,
         reply_markup=ReplyKeyboardRemove(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.input_text.set()
 
@@ -196,6 +206,7 @@ async def send_choice_approve(message: Message):
     await message.answer(
         texts.ticket.choice_approve,
         reply_markup=keyboards.choice_approve_keyboard(),
+        parse_mode=ParseMode.HTML,
     )
     await states.Registration.choice_approve.set()
 
@@ -241,6 +252,7 @@ async def send_ticket(ticket: TicketRecord):
     await bot.send_message(
         config.channel_chat_id,
         texts.ticket.ticket_channel(ticket),
+        parse_mode=ParseMode.HTML,
     )
 
 
@@ -248,6 +260,7 @@ async def send_ticket_was_sent(message: Message, ticket_id: int):
     await message.answer(
         texts.ticket.ticket_sent(ticket_id),
         reply_markup=ReplyKeyboardRemove(),
+        parse_mode=ParseMode.HTML,
     )
     await send_create_ticket(message)
 

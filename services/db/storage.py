@@ -53,7 +53,7 @@ class Storage:
         await self._db.commit()
         return model.to_domain()
 
-    async def ticket(self, ticket_id: int) -> domain.Ticket:
+    async def ticket(self, ticket_id: int) -> domain.TicketRecord:
         stmt = select(models.Ticket).filter_by(id=ticket_id)
         result = await self._db.execute(stmt)
         model = result.scalar_one_or_none()

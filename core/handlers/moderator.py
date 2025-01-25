@@ -2,7 +2,7 @@ import logging
 
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import IDFilter, ForwardedMessageFilter, IsReplyFilter, ChatTypeFilter
-from aiogram.types import Message, ChatType
+from aiogram.types import Message, ChatType, ParseMode
 
 from core import domain, texts
 
@@ -39,8 +39,9 @@ async def send_moderator_answer(message: Message, store: Storage, ticket_id: int
         logger.info(f"Message {reply_to_id} to reply not found")
     sent = await bot.send_message(
         ticket.owner_chat_id,
-        f"Ответ: {answer}",
+        texts.ticket.moderator_answer(ticket.id, answer),
         reply_to_message_id=reply_to_id,
+        parse_mode=ParseMode.HTML,
     )
     await store.save_message(
         domain.Message(
@@ -69,8 +70,9 @@ async def handle_student_answer(message: Message, state: FSMContext, store: Stor
 async def send_student_answer(message: Message, store: Storage, replied_message: domain.Message, answer: str):
     sent = await bot.send_message(
         config.comment_chat_id,
-        answer,
+        texts.ticket.student_answer(answer),
         reply_to_message_id=replied_message.message_id,
+        parse_mode=ParseMode.HTML,
     )
     await store.save_message(
         domain.Message(
@@ -84,7 +86,7 @@ async def send_student_answer(message: Message, store: Storage, replied_message:
 
 
 def extract_ticket_id(s: str) -> int:
-    i = s.find("#")
+    i = s.find(" ")
     j = s.find("\n", i)
     if j < 0:
         j = len(s)
