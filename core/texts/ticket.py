@@ -47,22 +47,22 @@ choice_approve = \
     "👀 Проверь, всё ли введено правильно. Подтверждаешь данные?"
 
 
-ticket_channel_template = compiler.compile("""
-<b>Обращение</b> <code>{{as_ticket_id ticket.id }}</code>
-
-📌 Тип: {{as_tag ticket.issue}}
-📂 Категория: {{as_tag ticket.category}}
-{{#if ticket.owner}}
-👤 Отправитель: {{ticket.owner.full_name}}
-🎓 Учебная группа: {{ticket.owner.study_group}}
-{{else}}
-👤 Отправитель: Анонимно
-{{/if}}
-🕒 Дата отправки: {{as_date ticket.opened_at}}
---------------------------------------------
-📩 Текст обращения:
-{{ticket.text}}
-""")
+ticket_channel_template = compiler.compile("\n".join((
+    "<b>Обращение</b> <code>{{as_ticket_id ticket.id }}</code>",
+    "",
+    "📌 Тип: {{as_tag ticket.issue}}",
+    "📂 Категория: {{as_tag ticket.category}}",
+    "{{#if ticket.owner}}",
+    "👤 Отправитель: {{ticket.owner.full_name}}",
+    "🎓 Учебная группа: {{ticket.owner.study_group}}",
+    "{{else}}",
+    "👤 Отправитель: Анонимно",
+    "{{/if}}",
+    "🕒 Дата отправки: {{as_date ticket.opened_at}}",
+    "--------------------------------------------",
+    "📩 Текст обращения:",
+    "{{ticket.text}}",
+)))
 
 answer_moderator_template = compiler.compile("\n".join((
     "💬 Ответ администратора на обращение <code>{{as_ticket_id ticket_id}}</code>:",
@@ -75,14 +75,14 @@ answer_student_template = compiler.compile("\n".join((
 )))
 
 ticket_sent_template = compiler.compile("\n".join((
-    "Твоё обращение отправлено! Ему присвоили номер <code>{{as_ticket_id ticket_id}}</code>"
+    "Твоё обращение отправлено! Ему присвоили номер <code>{{as_ticket_id ticket_id}}</code>",
 )))
 
 
 def ticket_sent(ticket_id: int) -> str:
     return ticket_sent_template(
         {
-            ticket_id: ticket_id
+            "ticket_id": ticket_id,
         },
         helpers={
             "as_ticket_id": as_ticket_id,
