@@ -250,16 +250,10 @@ async def send_input_text(message: Message):
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_text)
 async def handle_input_text(message: Message, state: FSMContext):
-    text = message.text
-    if not validate_text(text):
-        return await send_bad_text(message)
+    text = validate_text(message.text)
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
     await send_choice_approve(message)
-
-
-async def send_bad_text(message: Message):
-    await message.answer(texts.ticket.bad_text)
 
 
 async def send_choice_approve(message: Message):
@@ -413,7 +407,9 @@ def validate_group(group_name: str) -> bool:
         and (1 <= group_number <= 9)
 
 
-def validate_text(text: str) -> bool:
+def validate_text(text: str) -> str:
     with open('assets/bad_words.txt', 'r', encoding='utf-8') as file:
         bad_words = {line.strip() for line in file}
-    return all(word not in text for word in bad_words)
+    for word in bad_words:
+        text = text.replace(word, '*' * len(word))
+    return text
