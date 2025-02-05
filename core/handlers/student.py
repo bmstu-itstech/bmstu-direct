@@ -250,7 +250,7 @@ async def send_input_text(message: Message):
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_text)
 async def handle_input_text(message: Message, state: FSMContext):
-    text = validate_text(message.text)
+    text = escape_swear_words(message.text)
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
     await send_choice_approve(message)
@@ -405,11 +405,3 @@ def validate_group(group_name: str) -> bool:
         and (1 <= department <= 13) \
         and (left_border <= semester <= right_border) \
         and (1 <= group_number <= 9)
-
-
-def validate_text(text: str) -> str:
-    with open('assets/bad_words.txt', 'r', encoding='utf-8') as file:
-        bad_words = {line.strip() for line in file}
-    for word in bad_words:
-        text = text.replace(word, '*' * len(word))
-    return text
