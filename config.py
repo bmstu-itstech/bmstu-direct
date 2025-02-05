@@ -36,6 +36,7 @@ class Config:
     telegram_bot_token: str
     channel_chat_id: int
     comment_chat_id: int
+    swear_words_file: str
     db: DBConfig
 
 
@@ -43,6 +44,7 @@ config = Config(
     telegram_bot_token=env_required("TELEGRAM_BOT_TOKEN"),
     channel_chat_id=int(env_required("CHANNEL_CHAT_ID")),
     comment_chat_id=int(env_required("COMMENT_CHAT_ID")),
+    swear_words_file=env_with_default("SWEAR_WORDS", "assets/swear_words.txt"),
     db=DBConfig(
         host=env_with_default("DB_HOST", "localhost"),
         port=env_with_default("DB_PORT", 5432),
