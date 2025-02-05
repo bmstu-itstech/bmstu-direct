@@ -9,10 +9,11 @@ from core import texts
 from core import states
 from core import domain
 from core.domain import TicketRecord
-
 from core.handlers import keyboards
 from common.repository import dp, bot
+from common.swear_words import swear_words
 from services.db.storage import Storage
+
 from config import config
 
 
@@ -250,7 +251,7 @@ async def send_input_text(message: Message):
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_text)
 async def handle_input_text(message: Message, state: FSMContext):
-    text = escape_swear_words(message.text)
+    text = swear_words.escape_swear_words(message.text)
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
     await send_choice_approve(message)
