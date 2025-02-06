@@ -228,10 +228,9 @@ async def send_input_study_group(message: Message):
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_study_group)
 async def handle_input_study_group(message: Message, state: FSMContext):
-    group_name = message.text.upper()
-    if not validate_group(group_name):
+    study_group = message.text.upper()
+    if not validate_group(study_group):
         return await send_input_study_group_invalid(message)
-    study_group = message.text
     async with state.proxy() as data:
         data[DATA_STUDY_GROUP_KEY] = study_group
     await send_input_text(message)
