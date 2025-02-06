@@ -8,7 +8,7 @@ from aiogram.types import Message, ReplyKeyboardRemove, ParseMode, ChatType
 from core import texts
 from core import states
 from core import domain
-from core.domain import TicketRecord
+from core.domain import TicketRecord, Status
 from core.handlers import keyboards
 from common.repository import dp, bot
 from common.swear_words import escape_swear_words
@@ -57,7 +57,8 @@ async def handle_student_answer(message: Message, store: Storage):
         ticket_ids=ticket_ids,
         owner_message_id=message.reply_to_message.message_id,
     )
-    await send_student_answer(message, store, replied_message, message.text)
+    answer = escape_swear_words(message.text)
+    await send_student_answer(message, store, replied_message, answer)
 
 
 async def send_student_answer(message: Message, store: Storage, replied_message: domain.Message, answer: str):
@@ -205,7 +206,7 @@ async def handle_input_full_name(message: Message, state: FSMContext):
         all(re.match(r"^[А-ЯЁ][а-яё\-]+$", word) for word in words)
     ):
         return await send_input_full_name_invalid(message)
-    full_name = message.text
+    full_name = escape_swear_words(message.text)
     async with state.proxy() as data:
         data[DATA_FULL_NAME_KEY] = full_name
     await send_input_study_group(message)
@@ -227,7 +228,8 @@ async def send_input_study_group(message: Message):
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_study_group)
 async def handle_input_study_group(message: Message, state: FSMContext):
-    if not validate_group(message.text):
+    group_name = message.text.upper()
+    if not validate_group(group_name):
         return await send_input_study_group_invalid(message)
     study_group = message.text
     async with state.proxy() as data:
@@ -269,10 +271,14 @@ async def send_choice_approve(message: Message):
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_approve)
 async def handle_choice_approve(message: Message, state: FSMContext, store: Storage):
     if message.text == texts.buttons.yes:
-        return await save_ticket(message, state, store)
-    if message.text == texts.buttons.no:
+        saved = await save_ticket(message, state, store)
+        sent_id = await send_ticket(saved)
+        await send_ticket_was_sent(message, saved.id)
+        await store.update_ticket(saved.id, channel_message_id=sent_id)
+    elif message.text == texts.buttons.no:
         return await send_choice_issue(message)
-    await send_choice_approve_invalid(message)
+    else:
+        await send_choice_approve_invalid(message)
 
 
 async def send_choice_approve_invalid(message: Message):
@@ -280,7 +286,7 @@ async def send_choice_approve_invalid(message: Message):
     await send_choice_approve(message)
 
 
-async def save_ticket(message: Message, state: FSMContext, store: Storage):
+async def save_ticket(message: Message, state: FSMContext, store: Storage) -> TicketRecord:
     async with state.proxy() as data:
         owner = None
         if data[DATA_ANONYM_KEY]:
@@ -290,25 +296,22 @@ async def save_ticket(message: Message, state: FSMContext, store: Storage):
             )
         ticket = domain.Ticket(
             owner_chat_id=message.chat.id,
-            channel_message_id=message.message_id,
-            group_message_id=None,
             issue=data[DATA_ISSUE_KEY],
             category=data[DATA_CATEGORY_KEY],
             text=data[DATA_TEXT_KEY],
             owner=owner,
-            status=domain.Status.OPENED,
+            status=Status.OPENED,
         )
-    saved = await store.save_ticket(ticket)
-    await send_ticket(saved)
-    await send_ticket_was_sent(message, saved.id)
+    return await store.save_ticket(ticket)
 
 
-async def send_ticket(ticket: TicketRecord):
-    await bot.send_message(
+async def send_ticket(ticket: TicketRecord) -> int:
+    sent = await bot.send_message(
         config.channel_chat_id,
         texts.ticket.ticket_channel(ticket),
         parse_mode=ParseMode.HTML,
     )
+    return sent.message_id
 
 
 async def send_ticket_was_sent(message: Message, ticket_id: int):
@@ -363,46 +366,6 @@ def map_button_to_category(btn: str) -> domain.Category | None:
     return None
 
 
-valid_faculties = {
-  "Москва": ["АК", "БМТ", "ВИ", "ИБМ", "ИСОТ", "ИУ", "Л", "МТ", "ОЭ", "ПС", "РК", "РКТ", "РЛ", "РТ", "СГН", "СМ", "Т", "ФН", "ФО", "ЦДО", "Э", "ЮР"],
-  "Калуга": ["ВУЦ-КФ", "ИУК", "МК", "ПОДК"],
-  "Мытищи": ["К", "ЛТ"]
-}
-
-degree_semester = {
-  'Б': [1, 8],
-  'М': [1, 4],
-  'А': [1, 10],
-  'С': [1, 12]
-}
-
-
 def validate_group(group_name: str) -> bool:
-    regex = re.compile(
-        r"^(?P<faculty>[А-Я]+)(?P<department>\d{1,2})(?P<modifier>[ИЦ]?)?-(?P<semester>\d{1,2})(?P<group_number>\d)(?P<degree>[БМА]?)$")
-    match = regex.match(group_name)
-    if not match:
-        return False
-
-    faculty = match.group("faculty")
-    department = int(match.group("department"))
-    modifier = match.group("modifier") or ""
-    semester = int(match.group("semester"))
-    group_number = int(match.group("group_number"))
-    degree = match.group("degree") or "С"
-
-    if modifier not in ["", "Ц", "И"]:
-        return False
-
-    faculty_found = False
-    for _branch, faculties in valid_faculties.items():
-        if faculty in faculties:
-            faculty_found = True
-            break
-
-    left_border = degree_semester[degree][0]
-    right_border = degree_semester[degree][1]
-    return faculty_found \
-        and (1 <= department <= 13) \
-        and (left_border <= semester <= right_border) \
-        and (1 <= group_number <= 9)
+    regex = re.compile(r"[А-Я]{2,3}([1-9][0-9])?-[1-9][0-9]{1,2}[АБМ]?")
+    return True if regex.match(group_name) else False

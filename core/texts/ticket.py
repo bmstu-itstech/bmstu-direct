@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from core.domain import TicketRecord
+from core.domain import TicketRecord, Status
 from common.repository import compiler
 
 
@@ -50,7 +50,7 @@ input_study_group = \
     "🎓 Напиши номер своей учебной группы. Формат ввода: ИУ13-13Б."
 
 input_text = \
-    "📩 Опиши ниже свой вопрос или проблему:"
+    "📩 Опиши ниже свой вопрос, проблему или предложение:"
 
 choice_approve = \
     "👀 Проверь, всё ли введено правильно. Подтверждаешь данные?"
@@ -68,6 +68,7 @@ ticket_channel_template = compiler.compile("\n".join((
     "👤 Отправитель: Анонимно",
     "{{/if}}",
     "🕒 Дата отправки: {{as_date ticket.opened_at}}",
+    "{{as_status ticket.status}}",
     "--------------------------------------------",
     "📩 Текст обращения:",
     "{{ticket.text}}",
@@ -75,7 +76,9 @@ ticket_channel_template = compiler.compile("\n".join((
 
 answer_moderator_template = compiler.compile("\n".join((
     "💬 Ответ администратора на обращение <code>{{as_ticket_id ticket_id}}</code>:",
-    "{{answer}}"
+    "{{answer}}",
+    "",
+    "Чтобы ответить, отправьте сообщение ответом на данное."
 )))
 
 answer_student_template = compiler.compile("\n".join((
@@ -108,6 +111,7 @@ def ticket_channel(ticket: TicketRecord) -> str:
             "as_tag":       as_tag,
             "as_date":      as_date,
             "as_ticket_id": as_ticket_id,
+            "as_status":    as_status,
         }
     )
 
@@ -131,11 +135,23 @@ def moderator_answer(ticket_id: int, answer: str) -> str:
 
 
 def as_tag(this, s: str) -> str:
-    return "#" + s.lower().replace(" ", "")
+    return "#" + s.lower().replace(" ", "_")
 
 
 def as_date(this, dt: datetime, date_format: str = None) -> str:
     return datetime.strftime(dt, date_format or "%d.%m.%Y %H:%M:%S")
 
-def as_ticket_id(this, _id: int):
-    return f"{_id:04d}"
+
+def as_ticket_id(this, _id: int) -> str:
+    return f"{_id:05d}"
+
+
+def as_status(this, status: str) -> str:
+    match status:
+        case Status.OPENED:
+            return "🟢 " + as_tag(this, status)
+        case Status.IN_PROGRESS:
+            return "🟡 " + as_tag(this, status)
+        case Status.CLOSED:
+            return "🔴 " + as_tag(this, status)
+    raise ValueError("unknown ticket status: " + status)
