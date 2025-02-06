@@ -96,7 +96,7 @@ async def send_choice_issue(message: Message):
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_issue)
 async def handle_choice_issue(message: Message, state: FSMContext):
     if message.text == texts.buttons.back:
-        return await send_cancel_ticket(message, state)
+        return await send_cancel_ticket(message)
     issue = map_button_to_issue(message.text)
     if not issue:
         return await send_choice_issue_invalid(message)
@@ -105,7 +105,7 @@ async def handle_choice_issue(message: Message, state: FSMContext):
     await send_choice_category(message)
 
 
-async def send_cancel_ticket(message: Message, state: FSMContext):
+async def send_cancel_ticket(message: Message):
     await message.answer(texts.ticket.cancel_ticket, reply_markup=keyboards.create_ticket_keyboard())
     await states.Registration.create_ticket.set()
 
@@ -255,7 +255,28 @@ async def handle_input_text(message: Message, state: FSMContext):
     text = escape_swear_words(message.text)
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
-    await send_choice_approve(message)
+    await send_choice_processing_pd(message)
+
+
+async def send_choice_processing_pd(message: Message):
+    await message.answer(
+        texts.ticket.choice_processing_pd,
+        reply_markup=keyboards.choice_processing_pd_keyboard(),
+        parse_mode=ParseMode.HTML,
+    )
+    await states.Registration.choice_processing_pd.set()
+
+
+@dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_processing_pd)
+async def handle_choice_approve(message: Message):
+    if message.text == texts.buttons.yes:
+        return await send_choice_approve(message)
+    return await send_choice_processing_pd_invalid(message)
+
+
+async def send_choice_processing_pd_invalid(message: Message):
+    await message.answer(texts.errors.processing_pd_is_required)
+    await send_choice_processing_pd(message)
 
 
 async def send_choice_approve(message: Message):
@@ -323,7 +344,7 @@ async def send_ticket_was_sent(message: Message, ticket_id: int):
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state="*")
-async def unknown(message: Message, state: FSMContext, store: Storage):
+async def unknown(message: Message):
     if not message.reply_to_message:
         return await message.answer(texts.errors.no_reply)
     await message.answer(texts.errors.unknown)
