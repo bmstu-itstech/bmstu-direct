@@ -28,6 +28,8 @@ services:
       timeout: 10s
     networks:
       - host
+    volumes:
+      - ${DB_VOLUME:-./volume}:/var/lib/postgresql/data
 
 networks:
   host:
