@@ -36,6 +36,12 @@ def choice_privacy_keyboard() -> types.ReplyKeyboardMarkup:
     return keyboard
 
 
+def choice_processing_pd_keyboard() -> types.ReplyKeyboardMarkup:
+    keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
+    keyboard.add(KeyboardButton(texts.buttons.yes))
+    return keyboard
+
+
 def choice_approve_keyboard() -> types.ReplyKeyboardMarkup:
     keyboard = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     keyboard.add(
