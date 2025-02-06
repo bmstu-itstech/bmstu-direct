@@ -33,7 +33,7 @@ class Ticket(BaseModel):
     id = Column(BigInteger, Sequence("id", start=1, increment=1), primary_key=True)
 
     owner_chat_id      = Column(BigInteger,            nullable=False)
-    channel_message_id = Column(BigInteger,            nullable=False)
+    channel_message_id = Column(BigInteger,            nullable=True)
     group_message_id   = Column(BigInteger,            nullable=True)
     text               = Column(Text,                  nullable=False)
     issue              = Column(Enum(domain.Issue),    nullable=False)
@@ -47,8 +47,8 @@ class Ticket(BaseModel):
     def from_domain(cls, ticket: domain.Ticket) -> "Ticket":
         return Ticket(
             owner_chat_id      = ticket.owner_chat_id,
-            channel_message_id = ticket.channel_message_id,
-            group_message_id   = ticket.group_message_id,
+            channel_message_id = None,
+            group_message_id   = None,
             text               = ticket.text,
             issue              = ticket.issue,
             category           = ticket.category,
