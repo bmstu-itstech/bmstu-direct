@@ -387,5 +387,5 @@ def map_button_to_category(btn: str) -> domain.Category | None:
 
 
 def validate_group(group_name: str) -> bool:
-    regex = re.compile(r"[А-Я]{2,3}([1-9][0-9])?-[1-9][0-9]{1,2}[АБМ]?")
+    regex = re.compile(r"[А-Я]{2,3}([1-9][0-9]?)?-[1-9][0-9]{1,2}[АБМ]?")
     return True if regex.match(group_name) else False
