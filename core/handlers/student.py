@@ -149,12 +149,12 @@ async def send_choice_category_invalid(message: Message):
 
 async def send_choice_category_military(message: Message, state: FSMContext):
     await message.answer(texts.ticket.chosen_military, reply_markup=ReplyKeyboardRemove())
-    await state.finish()
+    await send_create_ticket(message)
 
 
 async def send_choice_category_admission(message: Message, state: FSMContext):
     await message.answer(texts.ticket.chosen_admission, reply_markup=ReplyKeyboardRemove())
-    await state.finish()
+    await send_create_ticket(message)
 
 
 async def send_choice_privacy(message: Message):

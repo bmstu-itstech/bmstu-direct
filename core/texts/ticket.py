@@ -79,6 +79,7 @@ ticket_channel_template = compiler.compile("\n".join((
 
 answer_moderator_template = compiler.compile("\n".join((
     "💬 Ответ администратора на обращение <code>{{as_ticket_id ticket_id}}</code>:",
+    "",
     "{{answer}}",
     "",
     "Чтобы ответить, отправьте сообщение ответом на данное."
