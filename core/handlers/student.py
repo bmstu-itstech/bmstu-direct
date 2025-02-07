@@ -139,9 +139,7 @@ async def handle_choice_category(message: Message, state: FSMContext):
         return await send_choice_category_admission(message, state)
     async with state.proxy() as data:
         data[DATA_CATEGORY_KEY] = category
-        if DATA_ANONYM_KEY in data:
-            return await send_choice_approve(message)
-    return await send_choice_privacy(message)
+    await send_choice_privacy(message)
 
 
 async def send_choice_category_invalid(message: Message):
@@ -257,7 +255,9 @@ async def handle_input_text(message: Message, state: FSMContext):
     text = escape_swear_words(message.text)
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
-    await send_choice_processing_pd(message)
+    if data[DATA_ANONYM_KEY]:
+        return await send_choice_approve(message)
+    return await send_choice_processing_pd(message)
 
 
 async def send_choice_processing_pd(message: Message):
