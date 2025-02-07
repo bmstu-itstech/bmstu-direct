@@ -255,8 +255,8 @@ async def handle_input_text(message: Message, state: FSMContext):
     text = escape_swear_words(message.text)
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
-    if data[DATA_ANONYM_KEY]:
-        return await send_choice_approve(message)
+        if data[DATA_ANONYM_KEY]:
+            return await send_choice_approve(message)
     return await send_choice_processing_pd(message)
 
 
