@@ -139,8 +139,7 @@ async def handle_choice_category(message: Message, state: FSMContext):
         return await send_choice_category_admission(message, state)
     async with state.proxy() as data:
         data[DATA_CATEGORY_KEY] = category
-    async with state.proxy() as data:
-        if data[DATA_ANONYM_KEY]:
+        if DATA_ANONYM_KEY in data:
             return await send_choice_approve(message)
     return await send_choice_privacy(message)
 
