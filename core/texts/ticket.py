@@ -94,6 +94,9 @@ ticket_sent_template = compiler.compile("\n".join((
     "Твоё обращение отправлено! Ему присвоили номер <code>{{as_ticket_id ticket_id}}</code>",
 )))
 
+banned = \
+    "Вы были забанены системой. Доступ к боту ограничен"
+
 
 def ticket_sent(ticket_id: int) -> str:
     return ticket_sent_template(

@@ -24,7 +24,10 @@ class User(BaseModel):
         return User(chat_id=user.chat_id, role=user.role)
 
     def to_domain(self) -> domain.User:
-        return domain.User(chat_id=self.chat_id, role=self.role)
+        return domain.User(
+            chat_id=self.chat_id,
+            role=self.role,
+        )
 
 
 class Ticket(BaseModel):
