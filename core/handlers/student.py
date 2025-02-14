@@ -203,7 +203,7 @@ async def handle_input_full_name(message: Message, state: FSMContext):
     words = message.text.split()
     if not (
         2 <= len(words) <= 3 and
-        all(re.match(r"^[А-ЯЁ][а-яё\-]+$", word) for word in words)
+        all(re.match(r"^[А-ЯЁа-яё\-]+$", word) for word in words)
     ):
         return await send_input_full_name_invalid(message)
     full_name = escape_swear_words(message.text)
