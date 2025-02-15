@@ -214,7 +214,7 @@ async def handle_input_full_name(message: Message, state: FSMContext):
             full_name.append(word.capitalize())
 
     async with state.proxy() as data:
-        data[DATA_FULL_NAME_KEY] = ' '.join(full_name)
+        data[DATA_FULL_NAME_KEY] = escape_swear_words(' '.join(full_name))
     await send_input_study_group(message)
 
 
