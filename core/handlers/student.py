@@ -275,25 +275,13 @@ async def send_choice_processing_pd(message: Message):
     await states.Registration.choice_processing_pd.set()
 
 
-# @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_processing_pd)
-# async def handle_choice_approve(message: Message):
-#     if message.text == texts.buttons.yes:
-#         return await send_choice_approve(message)
-#     return await send_choice_processing_pd_invalid(message)
-
-
-# async def send_choice_processing_pd_invalid(message: Message):
-#     await message.answer(texts.errors.processing_pd_is_required)
-#     await send_choice_processing_pd(message)
-
-
-# async def send_choice_approve(message: Message):
-#     await message.answer(
-#         texts.ticket.choice_approve,
-#         reply_markup=keyboards.choice_approve_keyboard(),
-#         parse_mode=ParseMode.HTML,
-#     )
-#     await states.Registration.choice_approve.set()
+async def send_choice_approve(message: Message):
+    await message.answer(
+        texts.ticket.choice_approve,
+        reply_markup=keyboards.choice_approve_keyboard(),
+        parse_mode=ParseMode.HTML,
+    )
+    await states.Registration.choice_approve.set()
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_approve)
