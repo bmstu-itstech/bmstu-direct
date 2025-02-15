@@ -206,9 +206,15 @@ async def handle_input_full_name(message: Message, state: FSMContext):
         all(re.match(r"^[А-ЯЁа-яё\-]+$", word) for word in words)
     ):
         return await send_input_full_name_invalid(message)
-    full_name = escape_swear_words(' '.join([word.capitalize() for word in words]))
+    full_name = []
+    for word in words:
+        if '-' in word:
+            full_name.append('-'.join([small_w.capitalize() for small_w in word.split('-')]))
+        else:
+            full_name.append(word.capitalize())
+
     async with state.proxy() as data:
-        data[DATA_FULL_NAME_KEY] = full_name
+        data[DATA_FULL_NAME_KEY] = ' '.join(full_name)
     await send_input_study_group(message)
 
 
