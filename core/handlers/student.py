@@ -206,7 +206,7 @@ async def handle_input_full_name(message: Message, state: FSMContext):
         all(re.match(r"^[А-ЯЁа-яё\-]+$", word) for word in words)
     ):
         return await send_input_full_name_invalid(message)
-    full_name = escape_swear_words(message.text)
+    full_name = escape_swear_words(' '.join([word.capitalize() for word in words]))
     async with state.proxy() as data:
         data[DATA_FULL_NAME_KEY] = full_name
     await send_input_study_group(message)
@@ -389,5 +389,5 @@ def map_button_to_category(btn: str) -> domain.Category | None:
 
 
 def validate_group(group_name: str) -> bool:
-    regex = re.compile(r"^((((ФМОП-)?(ИУ|ИБМ|МТ|СМ|БМТ|РЛ|Э|РК|ФН|Л|СГН|ВУЦ|УЦ|ИСОТ|РКТ|АК|ПС|РТ|ЛТ|К|ЮР|ОЭ|ТА|ТБД|ТИ|ТД|ТИП|ТКС|ТМО|ТМР|ТР|ТСА|ТСР|ТСС|ТУ|ТУС|ТЭ)\d\d?)|(ЮР))[ИЦ]?-(((1[0-2])|(\d))(\d)([АМБ]?(В)?)))$")
+    regex = re.compile(r"^((((ФМОП-)?(ИУ|ИБМ|МТ|СМ|БМТ|РЛ|Э|РК|ФН|Л|СГН|ВУЦ|УЦ|ИСОТ|РКТ|АК|ПС|РТ|ЛТ|К|ЮР|ОЭ|ТА|ТБД|ТИ|ТД|ТИП|ТКС|ТМО|ТМР|ТР|ТСА|ТСР|ТСС|ТУ|ТУС|ТЭ)[1-9]\d?)|(ЮР))[ИЦ]?-(((1[0-2])|(\d))(\d)([АМБ]?(В)?)))$")
     return True if regex.match(group_name) else False
