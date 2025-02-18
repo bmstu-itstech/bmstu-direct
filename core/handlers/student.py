@@ -3,7 +3,7 @@ import re
 
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import ChatTypeFilter, IsReplyFilter
-from aiogram.types import Message, ReplyKeyboardRemove, ParseMode, ChatType
+from aiogram.types import Message, ReplyKeyboardRemove, ParseMode, ChatType, ContentType
 
 from core import texts
 from core import states
@@ -49,6 +49,25 @@ async def send_create_ticket(message: Message):
     )
     await states.Registration.create_ticket.set()
 
+@dp.message_handler(content_types=[
+            ContentType.AUDIO,
+            ContentType.DOCUMENT,
+            ContentType.PHOTO,
+            ContentType.STICKER,
+            ContentType.VIDEO,
+            ContentType.VOICE,
+            ContentType.LOCATION,
+            ContentType.CONTACT,
+            ContentType.POLL,
+            ContentType.DICE,
+            ContentType.VIDEO_NOTE,
+            ContentType.ANIMATION,  #GIF
+        ], state="*")
+async def handle_no_text(message:Message):
+    await message.answer(
+        texts.errors.message_no_text,
+        parse_mode=ParseMode.HTML
+    )
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), IsReplyFilter(is_reply=True), state="*")
 async def handle_student_answer(message: Message, store: Storage):
