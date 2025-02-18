@@ -12,7 +12,7 @@ from core.middlewares.user_control import UserControlMiddleware
 from services.db.db_pool import create_db_pool
 
 # NOT REMOVE THIS IMPORT!
-from core.handlers import moderator, student
+from core.handlers import admin, moderator, student
 
 
 logger = logging.getLogger(__name__)

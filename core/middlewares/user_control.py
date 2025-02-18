@@ -9,8 +9,7 @@ from aiogram.types.base import TelegramObject
 from config import config
 
 from core import domain
-from services.db.storage import Storage, ModelNotFoundException
-
+from services.db.storage import Storage, UserNotFoundException
 
 logger = logging.getLogger(__name__)
 TelegramObjectType = TypeVar('TelegramObjectType', bound=TelegramObject)
@@ -28,32 +27,22 @@ class UserControlMiddleware(LifetimeControllerMiddleware):
 
         store: Storage = data["store"]
         this_user: types.User = obj.from_user
-        data["role"] = await map_user_role(store, this_user)
 
         try:
             await store.user(this_user.id)
-        except ModelNotFoundException:
-            await store.save_user(domain.User(chat_id=this_user.id, role=data["role"]))
+            role = await store.user_role(this_user.id)
+        except UserNotFoundException:
+            if this_user.is_bot:
+                role = domain.Role.BOT
+            elif this_user.id in config.admin_ids:
+                role = domain.Role.ADMIN
+            else:
+                role = domain.Role.STUDENT
+            await store.save_user(domain.User(chat_id=this_user.id, role=role))
+        if obj.chat.id == config.comment_chat_id:
+            role = domain.Role.MODERATOR
+
+        data["role"] = role
 
         if data["role"] is domain.Role.BANNED:
             raise CancelHandler()
-
-
-async def map_user_role(store: Storage, user: types.User) -> domain.Role:
-    if user.is_bot:
-        return domain.Role.BOT
-    if user.id in config.admin_ids:
-        return domain.Role.ADMIN
-
-    moderators = await store.users_where(role=domain.Role.MODERATOR)
-    banned_users = await store.users_where(role=domain.Role.BANNED)
-
-    moderator_ids = {moderator.chat_id for moderator in moderators}
-    banned_ids = {banned.chat_id for banned in banned_users}
-
-    if user.id in moderator_ids:
-        return domain.Role.MODERATOR
-    if user.id in banned_ids:
-        return domain.Role.BANNED
-
-    return domain.Role.STUDENT

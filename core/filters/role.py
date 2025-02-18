@@ -29,3 +29,8 @@ class RoleFilter(BoundFilter):
 class AdminFilter(RoleFilter):
     def __init__(self):
         super().__init__(Role.ADMIN)
+
+
+class ModeratorFilter(RoleFilter):
+    def __init__(self):
+        super().__init__(Role.MODERATOR)
