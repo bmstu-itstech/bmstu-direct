@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @dp.message_handler(AdminFilter(), Command("ban"))
-async def admin(message: Message, store: Storage):
+async def ban(message: Message, store: Storage):
     ticket_id_from_msg = message.get_args() or ""
     if not ticket_id_from_msg.isdigit():
         return await message.answer("Значение id тикета должно быть числом")
