@@ -19,7 +19,7 @@ class UserNotFoundException(Exception):
         super().__init__(f"user not found: {user_id}")
 
 
-class MessageNotFound(Exception):
+class MessageNotFoundException(Exception):
     def __init__(self, _id: int):
         super().__init__(f"message not found: id={_id}")
 
@@ -34,7 +34,7 @@ class Storage:
         model = models.Ticket.from_domain(ticket)
         self._db.add(model)
         await self._db.commit()
-        return model.to_domain()  # Возвращает обновлённую сущность.
+        return model.to_domain()
 
     async def update_ticket(self, ticket_id: int, **kwargs) -> domain.TicketRecord:
         stmt = select(models.Ticket).filter_by(id=ticket_id)
@@ -53,12 +53,10 @@ class Storage:
         await self._db.commit()
         return model.to_domain()
 
-    async def ticket(self, ticket_id: int) -> domain.TicketRecord:
-        stmt = select(models.Ticket).filter_by(id=ticket_id)
-        result = await self._db.execute(stmt)
-        model = result.scalar_one_or_none()
-        if not model:
-            raise TicketNotFoundException(ticket_id)
+    async def save_user(self, user: domain.User) -> domain.User:
+        model = models.User.from_domain(user)
+        self._db.add(model)
+        await self._db.commit()
         return model.to_domain()
 
     async def user(self, chat_id: int) -> domain.User:
@@ -67,6 +65,36 @@ class Storage:
         model = result.scalar_one_or_none()
         if not model:
             raise UserNotFoundException(chat_id)
+        return model.to_domain()
+
+    async def user_role(self, chat_id: int) -> domain.Role:
+        stmt = select(models.User.role).filter_by(chat_id=chat_id)
+        result = await self._db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update_user(self, chat_id: int, **kwargs) -> domain.User:
+        stmt = select(models.User).filter_by(chat_id=chat_id)
+        result = await self._db.execute(stmt)
+        model = result.scalar_one_or_none()
+        if not model:
+            raise UserNotFoundException(chat_id)
+        for key, value in kwargs.items():
+            if not hasattr(models.User, key):
+                raise ValueError(f'Class `models.User` doesn\'t have argument {key}')
+        stmt = \
+            update(models.User).      \
+            filter_by(chat_id=chat_id).    \
+            values(**kwargs)
+        await self._db.execute(stmt)
+        await self._db.commit()
+        return model.to_domain()
+
+    async def ticket(self, ticket_id: int) -> domain.TicketRecord:
+        stmt = select(models.Ticket).filter_by(id=ticket_id)
+        result = await self._db.execute(stmt)
+        model = result.scalar_one_or_none()
+        if not model:
+            raise TicketNotFoundException(ticket_id)
         return model.to_domain()
 
     async def save_message(self, message: domain.Message) -> None:
@@ -85,7 +113,7 @@ class Storage:
         result = await self._db.execute(stmt)
         model = result.scalar_one_or_none()
         if not model:
-            raise MessageNotFound(_id)
+            raise MessageNotFoundException(_id)
         return model.to_domain()
 
     async def message_by_id(self, ticket_ids: list[int], owner_message_id: int) -> domain.Message:
@@ -100,7 +128,7 @@ class Storage:
         result = await self._db.execute(stmt)
         model = result.scalars().first()
         if not model:
-            raise MessageNotFound(0)
+            raise MessageNotFoundException(0)
         return model.to_domain()
 
     async def message_ticket_id(self, _id: int) -> int:

@@ -1,14 +1,13 @@
 import logging
 
-from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import IDFilter, ForwardedMessageFilter, IsReplyFilter
+from aiogram.dispatcher.filters import ForwardedMessageFilter, IsReplyFilter
 from aiogram.types import Message, ParseMode
 
 from core import domain, texts
 
 from common.repository import dp, bot
-from core.domain import Status
-from services.db.storage import Storage, MessageNotFound
+from core.filters.role import ModeratorFilter
+from services.db.storage import Storage, MessageNotFoundException
 from config import config
 
 
@@ -17,13 +16,13 @@ DATA_SOURCE_ID_KEY = "source_id"
 logger = logging.getLogger(__name__)
 
 
-@dp.message_handler(IDFilter(chat_id=config.comment_chat_id), ForwardedMessageFilter(is_forwarded=True))
+@dp.message_handler(ModeratorFilter(), ForwardedMessageFilter(is_forwarded=True))
 async def handle_ticket_published(message: Message, store: Storage):
     ticket_id = extract_ticket_id(message.text)
     await store.update_ticket(ticket_id, group_message_id=message.message_id)
 
 
-@dp.message_handler(IDFilter(chat_id=config.comment_chat_id), IsReplyFilter(is_reply=True))
+@dp.message_handler(ModeratorFilter(), IsReplyFilter(is_reply=True))
 async def handle_moderator_answer(message: Message, store: Storage):
     _id = message.__dict__["_values"]["message_thread_id"]
     ticket_id = await store.message_ticket_id(_id)
@@ -36,7 +35,7 @@ async def send_moderator_answer(message: Message, store: Storage, ticket_id: int
     try:
         replied_message = await store.message_id(message.reply_to_message.message_id)
         reply_to_id = replied_message.owner_message_id
-    except MessageNotFound:
+    except MessageNotFoundException:
         logger.info(f"Message {reply_to_id} to reply not found")
 
     sent = await bot.send_message(
@@ -46,8 +45,8 @@ async def send_moderator_answer(message: Message, store: Storage, ticket_id: int
         parse_mode=ParseMode.HTML,
     )
 
-    if ticket.status != Status.IN_PROGRESS:
-        ticket = await store.update_ticket(ticket.id, status=Status.IN_PROGRESS)
+    if ticket.status != domain.Status.IN_PROGRESS:
+        ticket = await store.update_ticket(ticket.id, status=domain.Status.IN_PROGRESS)
         await update_ticket(ticket)
 
     await store.save_message(
