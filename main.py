@@ -6,7 +6,7 @@ from aiogram.utils import executor
 from sqlalchemy.orm import sessionmaker
 
 from common.repository import bot, dp, config
-from core.filters.role import AdminFilter, RoleFilter
+from core.filters.role import AdminFilter, RoleFilter, ModeratorFilter
 from core.middlewares.db import DbMiddleware
 from core.middlewares.user_control import UserControlMiddleware
 from services.db.db_pool import create_db_pool
@@ -48,6 +48,7 @@ async def main():
     dp.middleware.setup(UserControlMiddleware())
     dp.filters_factory.bind(RoleFilter)
     dp.filters_factory.bind(AdminFilter)
+    dp.filters_factory.bind(ModeratorFilter)
 
     try:
         await dp.start_polling(allowed_updates=["message", "callback_query", "inline_query"])

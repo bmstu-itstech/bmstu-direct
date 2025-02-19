@@ -49,6 +49,7 @@ async def send_create_ticket(message: Message):
     )
     await states.Registration.create_ticket.set()
 
+
 @dp.message_handler(content_types=[
             ContentType.AUDIO,
             ContentType.DOCUMENT,
@@ -61,13 +62,14 @@ async def send_create_ticket(message: Message):
             ContentType.POLL,
             ContentType.DICE,
             ContentType.VIDEO_NOTE,
-            ContentType.ANIMATION,  #GIF
+            ContentType.ANIMATION,      # GIF
         ], state="*")
-async def handle_no_text(message:Message):
+async def handle_no_text(message: Message):
     await message.answer(
         texts.errors.message_no_text,
         parse_mode=ParseMode.HTML
     )
+
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), IsReplyFilter(is_reply=True), state="*")
 async def handle_student_answer(message: Message, store: Storage):
