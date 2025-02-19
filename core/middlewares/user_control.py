@@ -9,7 +9,7 @@ from aiogram.types.base import TelegramObject
 from config import config
 
 from core import domain
-from services.db.storage import Storage, BannedUserNotFoundException
+from services.db.storage import Storage
 
 logger = logging.getLogger(__name__)
 TelegramObjectType = TypeVar('TelegramObjectType', bound=TelegramObject)
