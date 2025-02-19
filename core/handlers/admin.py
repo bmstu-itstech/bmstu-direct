@@ -15,17 +15,17 @@ DATA_SOURCE_ID_KEY = "source_id"
 logger = logging.getLogger(__name__)
 
 
-@dp.message_handler(AdminFilter(), Command("ban"))
+@dp.message_handler(AdminFilter(), Command("ban"), state="*")
 async def ban(message: Message, store: Storage):
     ticket_id_from_msg = message.get_args() or ""
     if not ticket_id_from_msg.isdigit():
         return await message.answer("Значение id тикета должно быть числом")
-    ticket_id = int(message.text.split()[-1])
+    ticket_id = int(ticket_id_from_msg)
     try:
         ticket = await store.ticket(ticket_id)
     except TicketNotFoundException:
         return await message.answer(texts.errors.no_ticket)
-    await store.update_user(ticket.owner_chat_id, role=domain.Role.BANNED)
+    await store.save_banned_user(domain.BannedUser(chat_id=ticket.owner_chat_id))
     await message.bot.send_message(
         chat_id=ticket.owner_chat_id,
         text=texts.ticket.banned,
