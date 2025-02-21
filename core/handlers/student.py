@@ -49,6 +49,7 @@ async def send_create_ticket(message: Message):
     )
     await states.Registration.create_ticket.set()
 
+
 @dp.message_handler(content_types=[
             ContentType.AUDIO,
             ContentType.DOCUMENT,
@@ -61,13 +62,14 @@ async def send_create_ticket(message: Message):
             ContentType.POLL,
             ContentType.DICE,
             ContentType.VIDEO_NOTE,
-            ContentType.ANIMATION,  #GIF
+            ContentType.ANIMATION,      # GIF
         ], state="*")
-async def handle_no_text(message:Message):
+async def handle_no_text(message: Message):
     await message.answer(
         texts.errors.message_no_text,
         parse_mode=ParseMode.HTML
     )
+
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), IsReplyFilter(is_reply=True), state="*")
 async def handle_student_answer(message: Message, store: Storage):
@@ -153,9 +155,9 @@ async def handle_choice_category(message: Message, state: FSMContext):
     if not category:
         return await send_choice_category_invalid(message)
     if category is domain.Category.MILITARY:
-        return await send_choice_category_military(message, state)
+        return await send_choice_category_military(message)
     if category is domain.Category.ADMISSION:
-        return await send_choice_category_admission(message, state)
+        return await send_choice_category_admission(message)
     async with state.proxy() as data:
         data[DATA_CATEGORY_KEY] = category
     await send_choice_privacy(message)
@@ -166,12 +168,12 @@ async def send_choice_category_invalid(message: Message):
     await send_choice_category(message)
 
 
-async def send_choice_category_military(message: Message, state: FSMContext):
+async def send_choice_category_military(message: Message):
     await message.answer(texts.ticket.chosen_military, reply_markup=ReplyKeyboardRemove())
     await send_create_ticket(message)
 
 
-async def send_choice_category_admission(message: Message, state: FSMContext):
+async def send_choice_category_admission(message: Message):
     await message.answer(texts.ticket.chosen_admission, reply_markup=ReplyKeyboardRemove())
     await send_create_ticket(message)
 

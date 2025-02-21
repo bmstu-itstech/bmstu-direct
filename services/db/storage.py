@@ -14,9 +14,9 @@ class TicketNotFoundException(Exception):
         super().__init__(f"ticket not found: {ticket_id}")
 
 
-class UserNotFoundException(Exception):
+class BannedUserNotFoundException(Exception):
     def __init__(self, user_id: int):
-        super().__init__(f"user not found: {user_id}")
+        super().__init__(f"banned user not found: {user_id}")
 
 
 class MessageNotFoundException(Exception):
@@ -53,41 +53,17 @@ class Storage:
         await self._db.commit()
         return model.to_domain()
 
-    async def save_user(self, user: domain.User) -> domain.User:
-        model = models.User.from_domain(user)
+    async def save_banned_user(self, user: domain.BannedUser) -> domain.BannedUser:
+        model = models.BannedUser.from_domain(user)
         self._db.add(model)
         await self._db.commit()
         return model.to_domain()
 
-    async def user(self, chat_id: int) -> domain.User:
-        stmt = select(models.User).filter_by(chat_id=chat_id)
+    async def is_user_banned(self, chat_id: int) -> bool:
+        stmt = select(models.BannedUser).filter_by(chat_id=chat_id)
         result = await self._db.execute(stmt)
         model = result.scalar_one_or_none()
-        if not model:
-            raise UserNotFoundException(chat_id)
-        return model.to_domain()
-
-    async def user_role(self, chat_id: int) -> domain.Role:
-        stmt = select(models.User.role).filter_by(chat_id=chat_id)
-        result = await self._db.execute(stmt)
-        return result.scalar_one_or_none()
-
-    async def update_user(self, chat_id: int, **kwargs) -> domain.User:
-        stmt = select(models.User).filter_by(chat_id=chat_id)
-        result = await self._db.execute(stmt)
-        model = result.scalar_one_or_none()
-        if not model:
-            raise UserNotFoundException(chat_id)
-        for key, value in kwargs.items():
-            if not hasattr(models.User, key):
-                raise ValueError(f'Class `models.User` doesn\'t have argument {key}')
-        stmt = \
-            update(models.User).      \
-            filter_by(chat_id=chat_id).    \
-            values(**kwargs)
-        await self._db.execute(stmt)
-        await self._db.commit()
-        return model.to_domain()
+        return model is not None
 
     async def ticket(self, ticket_id: int) -> domain.TicketRecord:
         stmt = select(models.Ticket).filter_by(id=ticket_id)
