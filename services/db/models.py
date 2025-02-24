@@ -13,17 +13,21 @@ class BaseModel(Base):
     updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
-class BannedUser(BaseModel):
-    __tablename__ = "banned_users"
+class User(BaseModel):
+    __tablename__ = "users"
 
-    chat_id = Column(BigInteger, primary_key=True)
+    chat_id = Column(BigInteger,        primary_key=True)
+    role    = Column(Enum(domain.Role), nullable=False)
 
     @classmethod
-    def from_domain(cls, user: domain.BannedUser) -> "BannedUser":
-        return BannedUser(chat_id=user.chat_id)
+    def from_domain(cls, user: domain.User) -> "User":
+        return User(chat_id=user.chat_id, role=user.role)
 
-    def to_domain(self) -> domain.BannedUser:
-        return domain.BannedUser(chat_id=self.chat_id)
+    def to_domain(self) -> domain.User:
+        return domain.User(
+            chat_id=self.chat_id,
+            role=self.role,
+        )
 
 
 class Ticket(BaseModel):

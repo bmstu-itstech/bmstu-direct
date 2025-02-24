@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 @dataclass
 class Student:
     full_name: str
