@@ -226,6 +226,7 @@ async def handle_input_full_name(message: Message, state: FSMContext):
         2 <= len(words) <= 3 and
         all(re.match(r"^[А-ЯЁа-яё\-]+$", word) for word in words)
     ):
+        logger.info(f"Invalid input full name: {message.text}")
         return await send_input_full_name_invalid(message)
     full_name = []
     for word in words:
@@ -257,6 +258,7 @@ async def send_input_study_group(message: Message):
 async def handle_input_study_group(message: Message, state: FSMContext):
     study_group = message.text.upper()
     if not validate_group(study_group):
+        logger.info(f"Invalid input study group: {message.text}")
         return await send_input_study_group_invalid(message)
     async with state.proxy() as data:
         data[DATA_STUDY_GROUP_KEY] = study_group

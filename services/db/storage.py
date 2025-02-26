@@ -34,6 +34,7 @@ class Storage:
         model = models.Ticket.from_domain(ticket)
         self._db.add(model)
         await self._db.commit()
+        logger.info(f"Add new ticket from chat id {ticket.owner_chat_id}")
         return model.to_domain()
 
     async def update_ticket(self, ticket_id: int, **kwargs) -> domain.TicketRecord:
@@ -57,6 +58,7 @@ class Storage:
         model = models.BannedUser.from_domain(user)
         self._db.add(model)
         await self._db.commit()
+        logger.info(f"Banned user with id={user.chat_id}")
         return model.to_domain()
 
     async def is_user_banned(self, chat_id: int) -> bool:
@@ -77,6 +79,7 @@ class Storage:
         model = models.GroupMessage.from_domain(message)
         self._db.add(model)
         await self._db.commit()
+        logger.info(f"Add new message with chat_id={message.chat_id} and message_id={message.message_id}")
 
     async def message_id(self, _id: int) -> domain.Message:
         """

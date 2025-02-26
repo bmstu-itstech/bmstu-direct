@@ -36,6 +36,8 @@ class UserControlMiddleware(LifetimeControllerMiddleware):
         elif this_user.id in config.admin_ids:
             role = domain.Role.ADMIN
         elif await store.is_user_banned(this_user.id):
+            logger.info(f"User with id={this_user.id} is banned. Handling skipped")
             raise CancelHandler()
 
         data["role"] = role
+        logger.info(f"Update (type={type(obj).__name__}) from user with id={this_user.id}. User role={role}")

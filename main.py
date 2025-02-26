@@ -2,6 +2,8 @@ import os
 import asyncio
 import logging
 
+from aiogram import Bot
+from aiogram.types import BotCommand
 from aiogram.utils import executor
 from sqlalchemy.orm import sessionmaker
 
@@ -18,16 +20,20 @@ from core.handlers import admin, moderator, student
 logger = logging.getLogger(__name__)
 
 
-async def main():
-    if os.path.isfile("bot.log"):
-        os.remove("bot.log")
+async def set_commands(bot: Bot):
+    commands = [
+        BotCommand(command="/start", description="Подать обращение"),
+    ]
+    await bot.set_my_commands(commands)
 
+
+async def main():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         encoding="UTF-8",
         handlers=[
-            logging.FileHandler("bot.log"),
+            logging.FileHandler(os.path.join(config.logs_dir, "bot.log")),
             logging.StreamHandler()
         ]
     )
@@ -42,6 +48,7 @@ async def main():
         echo=False,
     )
 
+    await set_commands(bot)
     bot_obj = await bot.get_me()
     logger.info(f"Bot username: {bot_obj.username}")
     dp.middleware.setup(DbMiddleware(db_pool))

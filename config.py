@@ -38,6 +38,7 @@ class Config:
     channel_chat_id: int
     comment_chat_id: int
     swear_words_file: str
+    logs_dir: str
     db: DBConfig
 
 
@@ -47,6 +48,7 @@ config = Config(
     channel_chat_id=int(env_required("CHANNEL_CHAT_ID")),
     comment_chat_id=int(env_required("COMMENT_CHAT_ID")),
     swear_words_file=env_with_default("SWEAR_WORDS", "assets/swear_words.txt"),
+    logs_dir=env_with_default("LOGS_DIR", "./logs"),
     db=DBConfig(
         host=env_with_default("DB_HOST", "localhost"),
         port=env_with_default("DB_PORT", "5432"),
