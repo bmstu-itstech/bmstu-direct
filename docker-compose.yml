@@ -7,6 +7,8 @@ services:
       network: host
     networks:
       - host
+    volumes:
+      - ${LOGS_DIR:-./logs}:/bot/logs
     depends_on:
       bmstu-direct-db:
         condition: service_healthy

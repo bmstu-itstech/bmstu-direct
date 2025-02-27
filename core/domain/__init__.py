@@ -5,7 +5,7 @@ from .role import Role
 from .status import Status
 from .student import Student
 from .ticket import Ticket, TicketRecord
-from .user import User
+from .banned_user import BannedUser
 
 __all__ = [
     "Category",
@@ -16,5 +16,5 @@ __all__ = [
     "Student",
     "Ticket",
     "TicketRecord",
-    "User",
+    "BannedUser",
 ]
