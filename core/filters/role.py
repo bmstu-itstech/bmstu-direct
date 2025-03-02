@@ -34,3 +34,7 @@ class AdminFilter(RoleFilter):
 class ModeratorFilter(RoleFilter):
     def __init__(self):
         super().__init__(Role.MODERATOR)
+
+class StudentFilter(RoleFilter):
+    def __init__(self):
+        super().__init__(Role.STUDENT)
