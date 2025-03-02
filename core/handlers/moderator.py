@@ -39,24 +39,23 @@ async def send_moderator_answer(album, message: Message, store: Storage, ticket_
     except MessageNotFoundException:
         logger.info(f"Message {reply_to_id} to reply not found")
 
-    if message.content_type == ContentType.PHOTO:
-        if message.media_group_id is None: # если одиночное фото
-            file_id = message.photo[-1].file_id
-            file_caption = message.caption
-            sent = await bot.send_photo(ticket.owner_chat_id, photo=file_id, reply_to_message_id=reply_to_id,
-                                                    parse_mode=ParseMode.HTML, caption=file_caption)
-        else: # если медиа групп
-            if album:
-                media = []
-                for obj in album:
-                    if obj.photo:
-                        file_id = obj.photo[-1].file_id
-                        if obj == album[0]:
-                            media.append(InputMediaPhoto(media=file_id, caption=message.caption))
-                        else:
-                            media.append(InputMediaPhoto(media=file_id))
-                sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media)
-    else: # если текстовое сообщение
+    if message.content_type == ContentType.PHOTO and message.media_group_id is None:  # если одиночное фото
+        file_id = message.photo[-1].file_id
+        file_caption = message.caption
+        sent = await bot.send_photo(ticket.owner_chat_id, photo=file_id, reply_to_message_id=reply_to_id,
+                                                parse_mode=ParseMode.HTML, caption=file_caption)
+    if message.content_type  == ContentType.PHOTO and message.media_group_id: # если медиа групп
+        if album:
+            media = []
+            for obj in album:
+                if obj.photo:
+                    file_id = obj.photo[-1].file_id
+                    if obj == album[0]:
+                        media.append(InputMediaPhoto(media=file_id, caption=message.caption))
+                    else:
+                        media.append(InputMediaPhoto(media=file_id))
+            sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media)
+    if message.content_type == ContentType.TEXT: # если текстовое сообщение
         sent = await bot.send_message(
             ticket.owner_chat_id,
             texts.ticket.moderator_answer(ticket.id, answer),
