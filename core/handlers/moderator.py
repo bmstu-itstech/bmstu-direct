@@ -41,21 +41,26 @@ async def send_moderator_answer(album, message: Message, store: Storage, ticket_
 
     if message.content_type == ContentType.PHOTO and message.media_group_id is None:  # если одиночное фото
         file_id = message.photo[-1].file_id
-        file_caption = message.caption
-        sent = await bot.send_photo(ticket.owner_chat_id, photo=file_id, reply_to_message_id=reply_to_id,
-                                                parse_mode=ParseMode.HTML, caption=file_caption)
-    if message.content_type  == ContentType.PHOTO and message.media_group_id: # если медиа групп
+        sent = await bot.send_photo(ticket.owner_chat_id, photo=file_id,
+                                                reply_to_message_id=reply_to_id,
+                                                parse_mode=ParseMode.HTML,
+                                                caption=texts.ticket.moderator_answer(ticket.id, message.caption))
+
+    elif message.content_type  == ContentType.PHOTO and message.media_group_id: # если медиа групп
         if album:
             media = []
             for obj in album:
-                if obj.photo:
-                    file_id = obj.photo[-1].file_id
-                    if obj == album[0]:
-                        media.append(InputMediaPhoto(media=file_id, caption=message.caption))
-                    else:
-                        media.append(InputMediaPhoto(media=file_id))
+                file_id = obj.photo[-1].file_id
+                if obj == album[0]:
+                    media.append(InputMediaPhoto(media=file_id,
+                                                 caption=texts.ticket.moderator_answer(ticket.id, message.caption),
+                                                 parse_mode=ParseMode.HTML))
+                else:
+                    media.append(InputMediaPhoto(media=file_id))
             sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media)
-    if message.content_type == ContentType.TEXT: # если текстовое сообщение
+            sent_message_id = sent[0].message_id
+
+    else: # если текстовое сообщение
         sent = await bot.send_message(
             ticket.owner_chat_id,
             texts.ticket.moderator_answer(ticket.id, answer),
@@ -71,7 +76,7 @@ async def send_moderator_answer(album, message: Message, store: Storage, ticket_
         domain.Message(
             chat_id=message.chat.id,
             message_id=message.message_id,
-            owner_message_id=sent.message_id,
+            owner_message_id=sent.message_id if not message.media_group_id else sent[0].message_id,
             reply_to_message_id=sent.reply_to_message.message_id if sent.reply_to_message else None,
             ticket_id=ticket_id,
         )
