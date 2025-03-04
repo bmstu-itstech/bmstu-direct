@@ -27,10 +27,10 @@ async def handle_ticket_published(message: Message, store: Storage):
 async def handle_moderator_answer(message: Message, store: Storage, album: list[Message] | None = None):
     _id = message.__dict__["_values"]["message_thread_id"]
     ticket_id = await store.message_ticket_id(_id)
-    await send_moderator_answer(album, message, store, ticket_id, message.text)
+    await send_moderator_answer(message, store, album, ticket_id, message.text)
 
 
-async def send_moderator_answer(album, message: Message, store: Storage, ticket_id: int, answer: str):
+async def send_moderator_answer(message: Message, store: Storage, album: list[Message] | None, ticket_id: int, answer: str):
     ticket = await store.ticket(ticket_id)
     reply_to_id = None
     try:
@@ -41,32 +41,27 @@ async def send_moderator_answer(album, message: Message, store: Storage, ticket_
 
     if message.content_type == ContentType.PHOTO and message.media_group_id is None:  # если одиночное фото
         file_id = message.photo[-1].file_id
-        sent = await bot.send_photo(ticket.owner_chat_id, photo=file_id,
+        sent = [await bot.send_photo(ticket.owner_chat_id, photo=file_id,
                                                 reply_to_message_id=reply_to_id,
                                                 parse_mode=ParseMode.HTML,
-                                                caption=texts.ticket.moderator_answer(ticket.id, message.caption))
-
+                                                caption=texts.ticket.moderator_answer(ticket.id, message.caption))]
     elif message.content_type  == ContentType.PHOTO and message.media_group_id: # если медиа групп
         if album:
-            media = []
-            for obj in album:
-                file_id = obj.photo[-1].file_id
-                if obj == album[0]:
-                    media.append(InputMediaPhoto(media=file_id,
+            media = [InputMediaPhoto(media=album[0].photo[-1].file_id,
                                                  caption=texts.ticket.moderator_answer(ticket.id, message.caption),
-                                                 parse_mode=ParseMode.HTML))
-                else:
-                    media.append(InputMediaPhoto(media=file_id))
-            sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media)
-            sent_message_id = sent[0].message_id
-
-    else: # если текстовое сообщение
-        sent = await bot.send_message(
+                                                 parse_mode=ParseMode.HTML)]
+            for obj in album[1:]:
+                file_id = obj.photo[-1].file_id
+                media.append(InputMediaPhoto(media=file_id))
+            sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
+    # если текстовое сообщение
+    else:
+        sent = [await bot.send_message(
             ticket.owner_chat_id,
             texts.ticket.moderator_answer(ticket.id, answer),
             reply_to_message_id=reply_to_id,
             parse_mode=ParseMode.HTML,
-        )
+        )]
 
     if ticket.status != domain.Status.IN_PROGRESS:
         ticket = await store.update_ticket(ticket.id, status=domain.Status.IN_PROGRESS)
@@ -76,8 +71,8 @@ async def send_moderator_answer(album, message: Message, store: Storage, ticket_
         domain.Message(
             chat_id=message.chat.id,
             message_id=message.message_id,
-            owner_message_id=sent.message_id if not message.media_group_id else sent[0].message_id,
-            reply_to_message_id=sent.reply_to_message.message_id if sent.reply_to_message else None,
+            owner_message_id=sent[0].message_id if not message.media_group_id else sent[0].message_id,
+            reply_to_message_id=sent[0].reply_to_message.message_id if sent[0].reply_to_message else None,
             ticket_id=ticket_id,
         )
     )

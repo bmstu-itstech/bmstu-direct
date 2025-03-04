@@ -64,7 +64,7 @@ async def send_create_ticket(message: Message):
             ContentType.DICE,
             ContentType.VIDEO_NOTE,
             ContentType.ANIMATION,      # GIF
-        ],  state="*")
+        ], state="*")
 async def handle_no_text(message: Message):
     await message.answer(
         texts.errors.message_no_text,
