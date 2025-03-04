@@ -2,10 +2,9 @@ import logging
 from typing import TypeVar
 
 from aiogram.dispatcher.handler import CancelHandler
-from aiogram.dispatcher.middlewares import LifetimeControllerMiddleware
+from aiogram.dispatcher.middlewares import LifetimeControllerMiddleware, BaseMiddleware
 from aiogram import types
 from aiogram.types.base import TelegramObject
-
 from config import config
 
 from core import domain

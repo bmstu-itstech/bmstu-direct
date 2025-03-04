@@ -11,6 +11,7 @@ from common.repository import bot, dp, config
 from core.filters.role import AdminFilter, RoleFilter, ModeratorFilter
 from core.middlewares.db import DbMiddleware
 from core.middlewares.user_control import UserControlMiddleware
+from core.middlewares.album import AlbumMiddleware
 from services.db.db_pool import create_db_pool
 
 # NOT REMOVE THIS IMPORT!
@@ -53,6 +54,7 @@ async def main():
     logger.info(f"Bot username: {bot_obj.username}")
     dp.middleware.setup(DbMiddleware(db_pool))
     dp.middleware.setup(UserControlMiddleware())
+    dp.middleware.setup(AlbumMiddleware(wait_time_seconds=1))
     dp.filters_factory.bind(RoleFilter)
     dp.filters_factory.bind(AdminFilter)
     dp.filters_factory.bind(ModeratorFilter)

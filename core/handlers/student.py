@@ -13,6 +13,7 @@ from core.handlers import keyboards
 from common.repository import dp, bot
 from common.swear_words import escape_swear_words
 from services.db.storage import Storage
+from core.filters.role import StudentFilter
 
 from config import config
 
@@ -50,7 +51,7 @@ async def send_create_ticket(message: Message):
     await states.Registration.create_ticket.set()
 
 
-@dp.message_handler(content_types=[
+@dp.message_handler(StudentFilter(), content_types=[
             ContentType.AUDIO,
             ContentType.DOCUMENT,
             ContentType.PHOTO,
