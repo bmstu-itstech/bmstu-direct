@@ -14,12 +14,12 @@ class TicketNotFoundException(Exception):
         super().__init__(f"ticket not found: {ticket_id}")
 
 
-class UserNotFoundException(Exception):
+class BannedUserNotFoundException(Exception):
     def __init__(self, user_id: int):
-        super().__init__(f"user not found: {user_id}")
+        super().__init__(f"banned user not found: {user_id}")
 
 
-class MessageNotFound(Exception):
+class MessageNotFoundException(Exception):
     def __init__(self, _id: int):
         super().__init__(f"message not found: id={_id}")
 
@@ -34,7 +34,8 @@ class Storage:
         model = models.Ticket.from_domain(ticket)
         self._db.add(model)
         await self._db.commit()
-        return model.to_domain()  # Возвращает обновлённую сущность.
+        logger.info(f"Add new ticket from chat id {ticket.owner_chat_id}")
+        return model.to_domain()
 
     async def update_ticket(self, ticket_id: int, **kwargs) -> domain.TicketRecord:
         stmt = select(models.Ticket).filter_by(id=ticket_id)
@@ -53,6 +54,19 @@ class Storage:
         await self._db.commit()
         return model.to_domain()
 
+    async def save_banned_user(self, user: domain.BannedUser) -> domain.BannedUser:
+        model = models.BannedUser.from_domain(user)
+        self._db.add(model)
+        await self._db.commit()
+        logger.info(f"Banned user with id={user.chat_id}")
+        return model.to_domain()
+
+    async def is_user_banned(self, chat_id: int) -> bool:
+        stmt = select(models.BannedUser).filter_by(chat_id=chat_id)
+        result = await self._db.execute(stmt)
+        model = result.scalar_one_or_none()
+        return model is not None
+
     async def ticket(self, ticket_id: int) -> domain.TicketRecord:
         stmt = select(models.Ticket).filter_by(id=ticket_id)
         result = await self._db.execute(stmt)
@@ -61,18 +75,11 @@ class Storage:
             raise TicketNotFoundException(ticket_id)
         return model.to_domain()
 
-    async def user(self, chat_id: int) -> domain.User:
-        stmt = select(models.User).filter_by(chat_id=chat_id)
-        result = await self._db.execute(stmt)
-        model = result.scalar_one_or_none()
-        if not model:
-            raise UserNotFoundException(chat_id)
-        return model.to_domain()
-
     async def save_message(self, message: domain.Message) -> None:
         model = models.GroupMessage.from_domain(message)
         self._db.add(model)
         await self._db.commit()
+        logger.info(f"Add new message with chat_id={message.chat_id} and message_id={message.message_id}")
 
     async def message_id(self, _id: int) -> domain.Message:
         """
@@ -85,7 +92,7 @@ class Storage:
         result = await self._db.execute(stmt)
         model = result.scalar_one_or_none()
         if not model:
-            raise MessageNotFound(_id)
+            raise MessageNotFoundException(_id)
         return model.to_domain()
 
     async def message_by_id(self, ticket_ids: list[int], owner_message_id: int) -> domain.Message:
@@ -100,7 +107,7 @@ class Storage:
         result = await self._db.execute(stmt)
         model = result.scalars().first()
         if not model:
-            raise MessageNotFound(0)
+            raise MessageNotFoundException(0)
         return model.to_domain()
 
     async def message_ticket_id(self, _id: int) -> int:

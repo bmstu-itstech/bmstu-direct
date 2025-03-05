@@ -15,3 +15,9 @@ class DbMiddleware(LifetimeControllerMiddleware):
         db: AsyncSession = self.pool()
         data["db"] = db
         data["store"] = Storage(db)
+
+    async def post_process(self, obj, data, *args):
+        del data["store"]
+        db = data.get("db")
+        if db:
+            await db.close()

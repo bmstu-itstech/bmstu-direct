@@ -2,8 +2,6 @@ import string
 from config import config
 
 
-
-
 with open(config.swear_words_file, "r", encoding="utf-8") as file:
     swear_words = { line.strip() for line in file }
 

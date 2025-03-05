@@ -34,20 +34,24 @@ class DBConfig:
 @dataclass
 class Config:
     telegram_bot_token: str
+    admin_ids: list[int]
     channel_chat_id: int
     comment_chat_id: int
     swear_words_file: str
+    logs_dir: str
     db: DBConfig
 
 
 config = Config(
     telegram_bot_token=env_required("TELEGRAM_BOT_TOKEN"),
+    admin_ids=list(map(int, env_required("ADMIN_IDS").split(";"))),
     channel_chat_id=int(env_required("CHANNEL_CHAT_ID")),
     comment_chat_id=int(env_required("COMMENT_CHAT_ID")),
     swear_words_file=env_with_default("SWEAR_WORDS", "assets/swear_words.txt"),
+    logs_dir=env_with_default("LOGS_DIR", "./logs"),
     db=DBConfig(
         host=env_with_default("DB_HOST", "localhost"),
-        port=env_with_default("DB_PORT", 5432),
+        port=env_with_default("DB_PORT", "5432"),
         user=env_with_default("DB_USER", "postgres"),
         name=env_with_default("DB_NAME", "postgres"),
         password=env_with_default("DB_PASSWORD", "postgres"),

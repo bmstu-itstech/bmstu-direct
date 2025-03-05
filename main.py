@@ -2,30 +2,39 @@ import os
 import asyncio
 import logging
 
+from aiogram import Bot
+from aiogram.types import BotCommand
 from aiogram.utils import executor
 from sqlalchemy.orm import sessionmaker
 
 from common.repository import bot, dp, config
+from core.filters.role import AdminFilter, RoleFilter, ModeratorFilter
 from core.middlewares.db import DbMiddleware
+from core.middlewares.user_control import UserControlMiddleware
+from core.middlewares.album import AlbumMiddleware
 from services.db.db_pool import create_db_pool
 
 # NOT REMOVE THIS IMPORT!
-from core.handlers import student, moderator
+from core.handlers import admin, moderator, student
 
 
 logger = logging.getLogger(__name__)
 
 
-async def main():
-    if os.path.isfile("bot.log"):
-        os.remove("bot.log")
+async def set_commands(bot: Bot):
+    commands = [
+        BotCommand(command="/start", description="Подать обращение"),
+    ]
+    await bot.set_my_commands(commands)
 
+
+async def main():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         encoding="UTF-8",
         handlers=[
-            logging.FileHandler("bot.log"),
+            logging.FileHandler(os.path.join(config.logs_dir, "bot.log")),
             logging.StreamHandler()
         ]
     )
@@ -40,9 +49,15 @@ async def main():
         echo=False,
     )
 
+    await set_commands(bot)
     bot_obj = await bot.get_me()
     logger.info(f"Bot username: {bot_obj.username}")
     dp.middleware.setup(DbMiddleware(db_pool))
+    dp.middleware.setup(UserControlMiddleware())
+    dp.middleware.setup(AlbumMiddleware(wait_time_seconds=1))
+    dp.filters_factory.bind(RoleFilter)
+    dp.filters_factory.bind(AdminFilter)
+    dp.filters_factory.bind(ModeratorFilter)
 
     try:
         await dp.start_polling(allowed_updates=["message", "callback_query", "inline_query"])
