@@ -1,7 +1,7 @@
 import logging
 
 from aiogram.dispatcher.filters import ForwardedMessageFilter, IsReplyFilter
-from aiogram.types import Message, ParseMode, ContentType, InputMediaPhoto, CallbackQuery
+from aiogram.types import Message, ParseMode, ContentType, InputMediaPhoto, CallbackQuery, InputMediaDocument
 
 from core import domain, texts
 
@@ -27,7 +27,7 @@ async def handle_ticket_published(message: Message, store: Storage):
 
 
 @dp.message_handler(ModeratorFilter(), IsReplyFilter(is_reply=True),
-                    content_types=[ContentType.PHOTO,  ContentType.TEXT])
+                    content_types=[ContentType.PHOTO,  ContentType.TEXT, ContentType.DOCUMENT])
 async def handle_moderator_answer(message: Message, store: Storage, album: list[Message] | None = None):
     _id = message.__dict__["_values"]["message_thread_id"]
     ticket_id = await store.message_ticket_id(_id)
@@ -43,23 +43,47 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
     except MessageNotFoundException:
         logger.info(f"Message {reply_to_id} to reply not found")
 
-    if message.content_type == ContentType.PHOTO and message.media_group_id is None:  # если одиночное фото
-        file_id = message.photo[-1].file_id
-        sent = [await bot.send_photo(ticket.owner_chat_id, photo=file_id,
-                                                reply_to_message_id=reply_to_id,
-                                                parse_mode=ParseMode.HTML,
-                                                caption=texts.ticket.moderator_answer(ticket.id, message.caption))]
-    elif message.content_type  == ContentType.PHOTO and message.media_group_id: # если медиа групп
-        if album:
-            media = [InputMediaPhoto(media=album[0].photo[-1].file_id,
-                                                 caption=texts.ticket.moderator_answer(ticket.id, message.caption),
-                                                 parse_mode=ParseMode.HTML)]
-            for obj in album[1:]:
-                file_id = obj.photo[-1].file_id
-                media.append(InputMediaPhoto(media=file_id))
-            sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
-    # если текстовое сообщение
-    else:
+    # Если документ
+    if  message.content_type == ContentType.DOCUMENT:
+        # Если одиночный документ
+        if message.media_group_id  is None:
+            file_id = message.document.file_id
+            sent = [await bot.send_document(ticket.owner_chat_id,
+                                            document=file_id,
+                                            reply_to_message_id=reply_to_id,
+                                            parse_mode=ParseMode.HTML,
+                                            caption=texts.ticket.moderator_answer(ticket_id, message.caption))]
+        else:
+            if album:
+                media = [InputMediaDocument(media=album[-1].document.file_id,
+                                            # caption=texts.ticket.moderator_answer(ticket.id, message.caption),
+                                            parse_mode=ParseMode.HTML)]
+                album.reverse()
+                for obj in album[1:]:
+                    file_id = obj.document.file_id
+                    media.append(InputMediaDocument(media=file_id))
+                media.reverse()
+                sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
+    # Если фото
+    elif message.content_type == ContentType.PHOTO:
+        # если одиночное фото
+        if message.media_group_id is None:
+            file_id = message.photo[-1].file_id
+            sent = [await bot.send_photo(ticket.owner_chat_id, photo=file_id,
+                                                    reply_to_message_id=reply_to_id,
+                                                    parse_mode=ParseMode.HTML,
+                                                    caption=texts.ticket.moderator_answer(ticket.id, message.caption))]
+        else:
+            if album:
+                media = [InputMediaPhoto(media=album[0].photo[-1].file_id,
+                                                     caption=texts.ticket.moderator_answer(ticket.id, message.caption),
+                                                     parse_mode=ParseMode.HTML)]
+                for obj in album[1:]:
+                    file_id = obj.photo[-1].file_id
+                    media.append(InputMediaPhoto(media=file_id))
+                sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
+    # Если текстовое сообщение
+    elif message.content_type == ContentType.TEXT:
         sent = [await bot.send_message(
             ticket.owner_chat_id,
             texts.ticket.moderator_answer(ticket.id, answer),
