@@ -11,7 +11,6 @@ from services.db.storage import Storage, MessageNotFoundException
 from config import config
 
 from core.domain.status import Status
-from core.domain.ticket import InvalidStatusChangeException
 from core.handlers import keyboards
 from core.callbacks import Status_callback
 
