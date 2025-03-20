@@ -1,7 +1,7 @@
 import logging
 
 from aiogram.dispatcher.filters import ForwardedMessageFilter, IsReplyFilter
-from aiogram.types import Message, ParseMode, ContentType, InputMediaPhoto
+from aiogram.types import Message, ParseMode, ContentType, InputMediaPhoto, CallbackQuery
 
 from core import domain, texts
 
@@ -10,6 +10,10 @@ from core.filters.role import ModeratorFilter
 from services.db.storage import Storage, MessageNotFoundException
 from config import config
 
+from core.domain.status import Status
+from core.domain.ticket import InvalidStatusChangeException
+from core.handlers import keyboards
+from core.callbacks import Status_callback
 
 DATA_SOURCE_ID_KEY = "source_id"
 
@@ -63,9 +67,9 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
             parse_mode=ParseMode.HTML,
         )]
 
-    if ticket.status != domain.Status.IN_PROGRESS:
-        ticket = await store.update_ticket(ticket.id, status=domain.Status.IN_PROGRESS)
-        await update_ticket(ticket)
+    await ticket.change_status(Status.IN_PROGRESS) # Обновление статуса
+    ticket = await store.update_ticket(ticket.id, status=ticket.status)
+    await update_ticket(ticket)
 
     await store.save_message(
         domain.Message(
@@ -84,6 +88,7 @@ async def update_ticket(ticket: domain.TicketRecord):
         chat_id=config.channel_chat_id,
         message_id=ticket.channel_message_id,
         parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id)
     )
 
 
@@ -93,3 +98,18 @@ def extract_ticket_id(s: str) -> int:
     if j < 0:
         j = len(s)
     return int(s[i+1:j])
+
+
+@dp.callback_query_handler(Status_callback.filter())
+async def status_callback_handler(query: CallbackQuery, callback_data: dict, store: Storage, album: list[Message] | None = None):
+        
+    ticket = await store.ticket(int(callback_data["ticket_id"]))
+    to_status = callback_data['status']
+
+    logger.info(f"Handeled callback status on ticket_id {ticket.id} from {ticket.status} to {to_status} ")
+
+    await ticket.change_status(to_status)
+
+    ticket = await store.update_ticket(ticket.id, status=ticket.status)
+
+    await update_ticket(ticket)

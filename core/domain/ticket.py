@@ -30,6 +30,38 @@ class Ticket:
     # Статус заявления: открыто или закрыто.
     status: Status
 
+    async def change_status(self, to_status: Status):
+        from_status = self.status
+
+        if from_status == to_status or \
+        Status not in (Status.OPENED, Status.CLOSED, Status.IN_PROGRESS, Status):
+            raise InvalidStatusChangeException(from_status, to_status)
+        
+        self.status = to_status
+
+    # async def open(self):
+    #     if self.status == Status.OPENED:
+    #         raise InvalidStatusChangeException(self.status, Status.OPENED)
+    #     self.status = Status.OPENED
+    
+
+    # async def close(self):
+    #     if self.status == Status.CLOSED:
+    #         raise InvalidStatusChangeException(self.status, Status.CLOSED)
+    #     self.status = Status.CLOSED
+
+
+    # async def in_progress(self):
+    #     if self.status not in (Status.ADMINS, Status.OPENED):
+    #         raise InvalidStatusChangeException(self.status, Status.IN_PROGRESS)
+    #     self.status = Status.IN_PROGRESS
+
+    
+    # async def admins(self):
+    #     if self.status not in (Status.IN_PROGRESS, Status.OPENED):
+    #         raise InvalidStatusChangeException(self.status, Status.ADMINS)
+    #     self.status = Status.ADMINS
+        
 
 @dataclass
 class TicketRecord(Ticket):
@@ -44,3 +76,8 @@ class TicketRecord(Ticket):
 
     # ID сообщения тикета в группе.
     group_message_id: int | None
+
+
+class InvalidStatusChangeException(Exception):
+    def __init__(self, cur_status, to_status):
+        super().__init__(f"Invalid change from status: = {cur_status} to {to_status}")

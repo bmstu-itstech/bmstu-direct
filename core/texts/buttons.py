@@ -38,3 +38,9 @@ close_ticket    = "close_ticket"
 open_ticket     = "open_ticket"
 make_moderator  = "make_moderator"
 make_admin      = "make_admin"
+
+#status
+status_open         = "Открыт"
+status_in_progress  = "В работе"
+status_close        = "Закрыт"
+status_admins       = "Администрация"

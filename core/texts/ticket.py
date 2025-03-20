@@ -173,4 +173,6 @@ def as_status(this, status: str) -> str:
             return "🟡 " + as_tag(this, status)
         case Status.CLOSED:
             return "🔴 " + as_tag(this, status)
+        case Status.ADMINS:
+            return "⚠️ " + as_tag(this, status)
     raise ValueError("unknown ticket status: " + status)

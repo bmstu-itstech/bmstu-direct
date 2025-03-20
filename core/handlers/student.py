@@ -362,6 +362,7 @@ async def send_ticket(ticket: TicketRecord) -> int:
         config.channel_chat_id,
         texts.ticket.ticket_channel(ticket),
         parse_mode=ParseMode.HTML,
+        reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id)
     )
     return sent.message_id
 

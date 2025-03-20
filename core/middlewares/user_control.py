@@ -28,7 +28,9 @@ class UserControlMiddleware(LifetimeControllerMiddleware):
         this_user: types.User = obj.from_user
 
         role = domain.Role.STUDENT
-        if this_user.is_bot:
+        if not getattr(obj, "chat", None):
+            role = domain.Role.MODERATOR 
+        elif this_user.is_bot:
             role = domain.Role.BOT
         elif obj.chat.id == config.comment_chat_id:
             role = domain.Role.MODERATOR
