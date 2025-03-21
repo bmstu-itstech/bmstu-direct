@@ -1,7 +1,7 @@
 import logging
 
 from aiogram.dispatcher.filters import ForwardedMessageFilter, IsReplyFilter
-from aiogram.types import Message, ParseMode, ContentType, InputMediaPhoto, CallbackQuery, InputMediaDocument
+from aiogram.types import Message, ParseMode, ContentType, InputMediaPhoto, InputMediaDocument, CallbackQuery
 
 from core import domain, texts
 

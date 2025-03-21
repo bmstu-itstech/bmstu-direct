@@ -38,29 +38,6 @@ class Ticket:
             raise InvalidStatusChangeException(from_status, to_status)
         
         self.status = to_status
-
-    # async def open(self):
-    #     if self.status == Status.OPENED:
-    #         raise InvalidStatusChangeException(self.status, Status.OPENED)
-    #     self.status = Status.OPENED
-    
-
-    # async def close(self):
-    #     if self.status == Status.CLOSED:
-    #         raise InvalidStatusChangeException(self.status, Status.CLOSED)
-    #     self.status = Status.CLOSED
-
-
-    # async def in_progress(self):
-    #     if self.status not in (Status.ADMINS, Status.OPENED):
-    #         raise InvalidStatusChangeException(self.status, Status.IN_PROGRESS)
-    #     self.status = Status.IN_PROGRESS
-
-    
-    # async def admins(self):
-    #     if self.status not in (Status.IN_PROGRESS, Status.OPENED):
-    #         raise InvalidStatusChangeException(self.status, Status.ADMINS)
-    #     self.status = Status.ADMINS
         
 
 @dataclass

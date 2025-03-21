@@ -40,7 +40,7 @@ make_moderator  = "make_moderator"
 make_admin      = "make_admin"
 
 #status
-status_open         = "Открыт"
-status_in_progress  = "В работе"
-status_close        = "Закрыт"
-status_admins       = "Администрация"
+status_open         = "Открыть"
+status_in_progress  = "В работу"
+status_close        = "Закрыть"
+status_admins       = "Отправить Администрации"
