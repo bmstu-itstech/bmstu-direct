@@ -33,8 +33,7 @@ class Ticket:
     async def change_status(self, to_status: Status):
         from_status = self.status
 
-        if from_status == to_status or \
-        Status not in (Status.OPENED, Status.CLOSED, Status.IN_PROGRESS, Status):
+        if from_status == to_status:
             raise InvalidStatusChangeException(from_status, to_status)
         
         self.status = to_status

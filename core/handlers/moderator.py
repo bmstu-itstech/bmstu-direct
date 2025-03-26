@@ -12,7 +12,7 @@ from config import config
 
 from core.domain.status import Status
 from core.handlers import keyboards
-from core.callbacks import Status_callback
+from core.callbacks import StatusCallback
 
 DATA_SOURCE_ID_KEY = "source_id"
 
@@ -123,7 +123,7 @@ def extract_ticket_id(s: str) -> int:
     return int(s[i+1:j])
 
 
-@dp.callback_query_handler(Status_callback.filter())
+@dp.callback_query_handler(StatusCallback.filter())
 async def status_callback_handler(query: CallbackQuery, callback_data: dict, store: Storage, album: list[Message] | None = None):
         
     ticket = await store.ticket(int(callback_data["ticket_id"]))
