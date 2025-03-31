@@ -31,30 +31,32 @@ class Ticket(BaseModel):
 
     id = Column(BigInteger, Sequence("id", start=1, increment=1), primary_key=True)
 
-    owner_chat_id      = Column(BigInteger,            nullable=False)
-    channel_message_id = Column(BigInteger,            nullable=True)
-    group_message_id   = Column(BigInteger,            nullable=True)
-    text               = Column(Text,                  nullable=False)
-    issue              = Column(Enum(domain.Issue),    nullable=False)
-    category           = Column(Enum(domain.Category), nullable=False)
-    anonym             = Column(Boolean,               nullable=False)
-    full_name          = Column(Text,                  nullable=True)
-    study_group        = Column(Text,                  nullable=True)
-    status             = Column(Enum(domain.Status),   nullable=False)
+    owner_chat_id               = Column(BigInteger,            nullable=False)
+    channel_content_message_id  = Column(BigInteger,            nullable=True)
+    channel_meta_message_id     = Column(BigInteger,            nullable=True)
+    group_message_id            = Column(BigInteger,            nullable=True)
+    text                        = Column(Text,                  nullable=False)
+    issue                       = Column(Enum(domain.Issue),    nullable=False)
+    category                    = Column(Enum(domain.Category), nullable=False)
+    anonym                      = Column(Boolean,               nullable=False)
+    full_name                   = Column(Text,                  nullable=True)
+    study_group                 = Column(Text,                  nullable=True)
+    status                      = Column(Enum(domain.Status),   nullable=False)
 
     @classmethod
     def from_domain(cls, ticket: domain.Ticket) -> "Ticket":
         return Ticket(
-            owner_chat_id      = ticket.owner_chat_id,
-            channel_message_id = None,
-            group_message_id   = None,
-            text               = ticket.text,
-            issue              = ticket.issue,
-            category           = ticket.category,
-            anonym             = ticket.owner is None,
-            full_name          = ticket.owner.full_name if ticket.owner is not None else None,
-            study_group        = ticket.owner.study_group if ticket.owner is not None else None,
-            status             = ticket.status,
+            owner_chat_id               = ticket.owner_chat_id,
+            channel_content_message_id  = None,
+            channel_meta_message_id     = None,
+            group_message_id            = None,
+            text                        = ticket.text,
+            issue                       = ticket.issue,
+            category                    = ticket.category,
+            anonym                      = ticket.owner is None,
+            full_name                   = ticket.owner.full_name if ticket.owner is not None else None,
+            study_group                 = ticket.owner.study_group if ticket.owner is not None else None,
+            status                      = ticket.status,
         )
 
     def to_domain(self) -> domain.TicketRecord:
@@ -65,16 +67,17 @@ class Ticket(BaseModel):
                 self.study_group,
             )
         return domain.TicketRecord(
-            id                 = self.id,
-            owner_chat_id      = self.owner_chat_id,
-            channel_message_id = self.channel_message_id,
-            group_message_id   = self.group_message_id,
-            text               = self.text,
-            issue              = domain.Issue(self.issue),
-            category           = domain.Category(self.category),
-            owner              = owner,
-            status             = domain.Status(self.status),
-            opened_at          = self.created_on,
+            id                          = self.id,
+            owner_chat_id               = self.owner_chat_id,
+            channel_content_message_id  = self.channel_content_message_id,
+            channel_meta_message_id     = self.channel_meta_message_id,
+            group_message_id            = self.group_message_id,
+            text                        = self.text,
+            issue                       = domain.Issue(self.issue),
+            category                    = domain.Category(self.category),
+            owner                       = owner,
+            status                      = domain.Status(self.status),
+            opened_at                   = self.created_on,
         )
 
 

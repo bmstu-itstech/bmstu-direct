@@ -92,7 +92,7 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
 
     await ticket.change_status(Status.IN_PROGRESS) # Обновление статуса
     ticket = await store.update_ticket(ticket.id, status=ticket.status)
-    await update_ticket(ticket)
+    await update_ticket_message(ticket)
 
     await store.save_message(
         domain.Message(
@@ -105,11 +105,11 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
     )
 
 
-async def update_ticket(ticket: domain.TicketRecord):
+async def update_ticket_message(ticket: domain.TicketRecord):
     await bot.edit_message_text(
-        texts.ticket.ticket_channel(ticket),
+        texts.ticket.ticket_meta_message_channel(ticket),
         chat_id=config.channel_chat_id,
-        message_id=ticket.channel_message_id,
+        message_id=ticket.channel_meta_message_id,
         parse_mode=ParseMode.HTML,
         reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id)
     )
@@ -135,4 +135,4 @@ async def status_callback_handler(query: CallbackQuery, callback_data: dict, sto
 
     ticket = await store.update_ticket(ticket.id, status=ticket.status)
 
-    await update_ticket(ticket)
+    await update_ticket_message(ticket)

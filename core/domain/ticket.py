@@ -47,8 +47,11 @@ class TicketRecord(Ticket):
     # Время открытия тикета
     opened_at: datetime | None
 
-    # ID сообщения тикета в канале.
-    channel_message_id: int | None
+    # ID сообщения c текстом обращение тикета в канале.
+    channel_content_message_id: int | None
+
+    # ID сообщения с информацией о тикете в канале.
+    channel_meta_message_id: int | None
 
     # ID сообщения тикета в группе.
     group_message_id: int | None
