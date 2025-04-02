@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
 
 from core import domain
 from services.db import models
@@ -36,6 +37,27 @@ class Storage:
         await self._db.commit()
         logger.info(f"Add new ticket from chat id {ticket.owner_chat_id}")
         return model.to_domain()
+
+    async def export_all(self, data_queue: asyncio.Queue, stop_event: asyncio.Event):
+        selected_columns = [
+            models.Ticket.id,
+            models.Ticket.text,
+            models.Ticket.issue,
+            models.Ticket.category,
+            models.Ticket.anonym,
+            models.Ticket.full_name,
+            models.Ticket.study_group,
+            models.Ticket.status,
+            models.Ticket.created_on,
+        ]
+
+        result = await self._db.execute(select(*selected_columns))
+        tickets = result.all()
+        await data_queue.put([str(col.name) for col in selected_columns])
+        for ticket in tickets:
+            await data_queue.put(ticket)
+        stop_event.set()
+        return data_queue
 
     async def update_ticket(self, ticket_id: int, **kwargs) -> domain.TicketRecord:
         stmt = select(models.Ticket).filter_by(id=ticket_id)
