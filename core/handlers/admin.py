@@ -1,7 +1,11 @@
 import logging
 
 from aiogram.dispatcher.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, InputFile
+import asyncio
+from io import StringIO
+import csv
+
 
 from core import domain, texts
 
@@ -31,3 +35,33 @@ async def ban(message: Message, store: Storage):
         text=texts.ticket.banned,
     )
     await message.answer("Пользователь успешно заблокирован")
+
+
+@dp.message_handler(AdminFilter(), Command("export"), state="*")
+async def export(message: Message, store: Storage):
+    data_queue = asyncio.Queue()
+    stop_event = asyncio.Event()
+    chat_id = message.chat.id
+    await store.export_all(data_queue, stop_event)
+    await send_csv(chat_id, message, data_queue, stop_event)
+
+
+async def send_csv(chat_id: int, message: Message, data_queue: asyncio.Queue, stop_event: asyncio.Event):
+    csv_buffer = StringIO()
+    csv_writer = csv.writer(csv_buffer,  dialect = "excel")
+
+    try:
+        csv_buffer.write('\ufeff')
+        while not stop_event.is_set() or not data_queue.empty():
+            try:
+                row = await asyncio.wait_for(data_queue.get(), timeout=0.1)
+                csv_writer.writerow(row)
+                data_queue.task_done()
+            except asyncio.TimeoutError:
+                pass
+
+        csv_buffer.seek(0)
+        file = InputFile(csv_buffer, filename="Tickets.csv")
+        await message.bot.send_document(chat_id, document=file)
+    finally:
+        csv_buffer.close()
