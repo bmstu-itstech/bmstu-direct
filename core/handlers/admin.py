@@ -3,7 +3,7 @@ import logging
 from aiogram.dispatcher.filters import Command
 from aiogram.types import Message, InputFile
 import asyncio
-from io import StringIO, BytesIO
+from io import StringIO
 import csv
 
 
@@ -39,7 +39,6 @@ async def ban(message: Message, store: Storage):
 
 @dp.message_handler(AdminFilter(), Command("export"), state="*")
 async def export(message: Message, store: Storage):
-    logger.info(f"!!  EXPORT ENTRY")
     data_queue = asyncio.Queue()
     stop_event = asyncio.Event()
     chat_id = message.chat.id
