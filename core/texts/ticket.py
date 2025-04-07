@@ -59,9 +59,14 @@ choice_approve = \
     "👀 Проверь, всё ли введено правильно. Подтверждаешь данные?"
 
 
-ticket_channel_template = compiler.compile("\n".join((
+ticket_content_message_template = compiler.compile("\n".join((
     "<b>Обращение</b> <code>{{as_ticket_id ticket.id }}</code>",
     "",
+    "📩 Текст обращения:",
+    "{{ticket.text}}",
+)))
+
+ticket_meta_message_template = compiler.compile("\n".join((
     "📌 Тип: {{as_tag ticket.issue}}",
     "📂 Категория: {{as_tag ticket.category}}",
     "{{#if ticket.owner}}",
@@ -72,10 +77,8 @@ ticket_channel_template = compiler.compile("\n".join((
     "{{/if}}",
     "🕒 Дата отправки: {{as_date ticket.opened_at}}",
     "{{as_status ticket.status}}",
-    "--------------------------------------------",
-    "📩 Текст обращения:",
-    "{{ticket.text}}",
 )))
+
 
 answer_moderator_template = compiler.compile("\n".join((
     "💬 Ответ администратора на обращение <code>{{as_ticket_id ticket_id}}</code>:",
@@ -121,15 +124,25 @@ def ticket_sent(ticket_id: int) -> str:
     )
 
 
-def ticket_channel(ticket: TicketRecord) -> str:
-    return ticket_channel_template(
+def ticket_content_message_channel(ticket: TicketRecord) -> str:
+    return ticket_content_message_template(
         {
-            "ticket": ticket,
+            "ticket": ticket
+        },
+        helpers={
+            "as_ticket_id": as_ticket_id,
+        }
+    )
+
+
+def ticket_meta_message_channel(ticket: TicketRecord) -> str:
+    return ticket_meta_message_template(
+        {
+            "ticket": ticket
         },
         helpers={
             "as_tag":       as_tag,
             "as_date":      as_date,
-            "as_ticket_id": as_ticket_id,
             "as_status":    as_status,
         }
     )
@@ -173,4 +186,6 @@ def as_status(this, status: str) -> str:
             return "🟡 " + as_tag(this, status)
         case Status.CLOSED:
             return "🔴 " + as_tag(this, status)
+        case Status.ADMINS:
+            return "⚠️ " + as_tag(this, status)
     raise ValueError("unknown ticket status: " + status)

@@ -323,10 +323,10 @@ async def send_choice_approve(message: Message):
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_approve)
 async def handle_choice_approve(message: Message, state: FSMContext, store: Storage):
     if message.text == texts.buttons.yes:
-        saved = await save_ticket(message, state, store)
-        sent_id = await send_ticket(saved)
-        await send_ticket_was_sent(message, saved.id)
-        await store.update_ticket(saved.id, channel_message_id=sent_id)
+        ticket = await save_ticket(message, state, store)
+        content_message_id, meta_message_id = await send_ticket(ticket)
+        await send_ticket_was_sent(message, ticket.id)
+        await store.update_ticket(ticket.id, channel_content_message_id=content_message_id, channel_meta_message_id=meta_message_id)
     elif message.text == texts.buttons.no:
         return await send_choice_issue(message)
     else:
@@ -357,13 +357,18 @@ async def save_ticket(message: Message, state: FSMContext, store: Storage) -> Ti
     return await store.save_ticket(ticket)
 
 
-async def send_ticket(ticket: TicketRecord) -> int:
-    sent = await bot.send_message(
+async def send_ticket(ticket: TicketRecord) -> tuple[int, int]:
+    content = await bot.send_message(
         config.channel_chat_id,
-        texts.ticket.ticket_channel(ticket),
-        parse_mode=ParseMode.HTML,
-    )
-    return sent.message_id
+        texts.ticket.ticket_content_message_channel(ticket),
+        parse_mode=ParseMode.HTML)
+
+    meta = await bot.send_message(
+        config.channel_chat_id,
+        texts.ticket.ticket_meta_message_channel(ticket),
+        reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id))
+
+    return content.message_id, meta.message_id
 
 
 async def send_ticket_was_sent(message: Message, ticket_id: int):

@@ -30,6 +30,14 @@ class Ticket:
     # Статус заявления: открыто или закрыто.
     status: Status
 
+    async def change_status(self, to_status: Status):
+        from_status = self.status
+
+        if from_status == to_status:
+            raise InvalidStatusChangeException(from_status, to_status)
+        
+        self.status = to_status
+        
 
 @dataclass
 class TicketRecord(Ticket):
@@ -39,8 +47,16 @@ class TicketRecord(Ticket):
     # Время открытия тикета
     opened_at: datetime | None
 
-    # ID сообщения тикета в канале.
-    channel_message_id: int | None
+    # ID сообщения c текстом обращение тикета в канале.
+    channel_content_message_id: int | None
+
+    # ID сообщения с информацией о тикете в канале.
+    channel_meta_message_id: int | None
 
     # ID сообщения тикета в группе.
     group_message_id: int | None
+
+
+class InvalidStatusChangeException(Exception):
+    def __init__(self, cur_status, to_status):
+        super().__init__(f"Invalid change from status: = {cur_status} to {to_status}")
