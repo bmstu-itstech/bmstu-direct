@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import domain
 from services.db import models
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -131,3 +132,26 @@ class Storage:
         if not ticket_ids:
             raise TicketNotFoundException(chat_id)
         return ticket_ids
+
+
+    async def close_old_tickets(self, update_ticket_message) -> None:
+        # timeout_date = datetime.now() + timedelta(weeks=2)
+        timeout_date = datetime.now()
+
+
+        stmt = \
+            select(models.Ticket.id). \
+            filter_by(status=domain.Status.IN_PROGRESS). \
+            filter(models.Ticket.updated_on < timeout_date)
+        
+        result = await self._db.execute(stmt)
+        ticket_ids = result.scalars().all()
+        if not ticket_ids:
+            logger.info("old tickets not found")
+            return
+        for _id in ticket_ids:
+            ticket = await self.ticket(_id)
+            await ticket.change_status(domain.Status.CLOSED)
+            await update_ticket_message(ticket)
+
+

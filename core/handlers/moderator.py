@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 @dp.message_handler(ModeratorFilter(), ForwardedMessageFilter(is_forwarded=True))
 async def handle_ticket_published(message: Message, store: Storage):
     ticket_id = extract_ticket_id(message.text)
-    await store.update_ticket(ticket_id, group_message_id=message.message_id)
+    if ticket_id:
+        await store.update_ticket(ticket_id, group_message_id=message.message_id)
 
 
 @dp.message_handler(ModeratorFilter(), IsReplyFilter(is_reply=True),
@@ -116,11 +117,13 @@ async def update_ticket_message(ticket: domain.TicketRecord):
 
 
 def extract_ticket_id(s: str) -> int:
-    i = s.find(" ")
-    j = s.find("\n", i)
-    if j < 0:
-        j = len(s)
-    return int(s[i+1:j])
+    if s.startswith("Обращение "):
+        i = s.find(" ")
+        j = s.find("\n", i)
+        if j < 0:
+            j = len(s)
+        return int(s[i+1:j])
+    return 0
 
 
 @dp.callback_query_handler(StatusCallback.filter())

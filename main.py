@@ -12,6 +12,7 @@ from core.filters.role import AdminFilter, RoleFilter, ModeratorFilter
 from core.middlewares.db import DbMiddleware
 from core.middlewares.user_control import UserControlMiddleware
 from core.middlewares.album import AlbumMiddleware
+from core.schedule.jobs import two_weeks_status_scheduler, db_check
 from services.db.db_pool import create_db_pool
 
 # NOT REMOVE THIS IMPORT!
@@ -58,6 +59,10 @@ async def main():
     dp.filters_factory.bind(RoleFilter)
     dp.filters_factory.bind(AdminFilter)
     dp.filters_factory.bind(ModeratorFilter)
+
+
+    schedule = await two_weeks_status_scheduler(db_check(db_pool))
+    schedule.start()
 
     try:
         await dp.start_polling(allowed_updates=["message", "callback_query", "inline_query"])
