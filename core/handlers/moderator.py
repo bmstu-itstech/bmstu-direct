@@ -131,7 +131,7 @@ async def status_callback_handler(query: CallbackQuery, callback_data: dict, sto
 
     logger.info(f"Handeled callback status on ticket_id {ticket.id} from {ticket.status} to {to_status} ")
 
-    await ticket.change_status(to_status)
+    await ticket.change_status(Status(to_status))
 
     ticket = await store.update_ticket(ticket.id, status=ticket.status)
 

@@ -74,6 +74,10 @@ def status_in_progress_keyboard(ticket_id: int) -> types.InlineKeyboardMarkup:
         InlineKeyboardButton(
             texts.buttons.status_admins,
             callback_data=make_status_cb(Status.ADMINS, ticket_id)
+            ),
+        InlineKeyboardButton(
+            texts.buttons.status_close,
+            callback_data=make_status_cb(Status.CLOSED, ticket_id)
             )
     )
     return keyboard
