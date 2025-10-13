@@ -23,15 +23,6 @@ def env_with_default(key: str, default: str = "") -> str:
 
 
 @dataclass
-class DBConfig:
-    host: str
-    port: str
-    user: str
-    name: str
-    password: str
-
-
-@dataclass
 class Config:
     telegram_bot_token: str
     admin_ids: list[int]
@@ -39,7 +30,7 @@ class Config:
     comment_chat_id: int
     swear_words_file: str
     logs_dir: str
-    db: DBConfig
+    db_uri: str
 
 
 config = Config(
@@ -49,11 +40,5 @@ config = Config(
     comment_chat_id=int(env_required("COMMENT_CHAT_ID")),
     swear_words_file=env_with_default("SWEAR_WORDS", "assets/swear_words.txt"),
     logs_dir=env_with_default("LOGS_DIR", "./logs"),
-    db=DBConfig(
-        host=env_with_default("DB_HOST", "localhost"),
-        port=env_with_default("DB_PORT", "5432"),
-        user=env_with_default("DB_USER", "postgres"),
-        name=env_with_default("DB_NAME", "postgres"),
-        password=env_with_default("DB_PASSWORD", "postgres"),
-    )
+    db_uri=env_with_default("DATABASE_URI", "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres?sslmode=disable"),
 )

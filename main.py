@@ -34,20 +34,13 @@ async def main():
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         encoding="UTF-8",
         handlers=[
-            logging.FileHandler(os.path.join(config.logs_dir, "bot.log")),
+            #logging.FileHandler(os.path.join(config.logs_dir, "bot.log")),
             logging.StreamHandler()
         ]
     )
     logger.info("Starting bot")
 
-    db_pool: sessionmaker = await create_db_pool(
-        user=config.db.user,
-        password=config.db.password,
-        host=config.db.host,
-        port=5432,
-        name=config.db.name,
-        echo=False,
-    )
+    db_pool: sessionmaker = await create_db_pool(config.db_uri)
 
     await set_commands(bot)
     bot_obj = await bot.get_me()

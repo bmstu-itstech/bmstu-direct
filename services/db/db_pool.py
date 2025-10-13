@@ -10,10 +10,10 @@ from services.db.models import Base
 logger = logging.getLogger(__name__)
 
 
-async def create_db_pool(user, password, host, port, name, echo):
+async def create_db_pool(uri: str):
     engine = create_async_engine(
-        f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{name}",
-        echo=echo,
+        uri,
+        echo=False,
         future=True,
         poolclass=NullPool,
     )
