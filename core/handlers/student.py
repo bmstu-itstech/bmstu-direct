@@ -99,6 +99,9 @@ async def handle_student_answer(message: Message, store: Storage, album: list[Me
     answer = escape_swear_words(
         message.html_caption or message.html_text or message.caption or message.text or ""
     )
+    answer = escape_swear_words(
+        message.html_caption or message.html_text or message.caption or message.text or ""
+    )
     await send_student_answer(message, store, replied_message, answer, album)
 
 
