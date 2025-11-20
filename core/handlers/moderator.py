@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @dp.message_handler(ModeratorFilter(), ForwardedMessageFilter(is_forwarded=True))
 async def handle_ticket_published(message: Message, store: Storage):
     ticket_id = extract_ticket_id(message.text)
-    thread_id = getattr(message, "message_thread_id", None) or message.message_id
+    thread_id = _thread_or_message_id(message)
     await store.update_ticket(ticket_id, group_message_id=thread_id)
 
 
@@ -33,7 +33,7 @@ async def handle_ticket_published(message: Message, store: Storage):
     content_types=[ContentType.ANY],
 )
 async def handle_moderator_answer(message: Message, store: Storage, album: list[Message] | None = None):
-    thread_id = getattr(message, "message_thread_id", None) or message.message_id
+    thread_id = _thread_or_message_id(message)
     try:
         ticket_id = await store.message_ticket_id(thread_id)
     except TicketNotFoundException:
@@ -177,6 +177,17 @@ def extract_ticket_id(s: str) -> int:
         return int(match.group(1))
 
     raise ValueError("Ticket id not found in message")
+
+
+def _thread_or_message_id(message: Message) -> int:
+    """Return thread identifier if available, otherwise fallback to message id.
+
+    Some message types in aiogram may not contain ``message_thread_id`` attribute
+    (e.g. private chats). Using ``getattr`` avoids ``AttributeError`` while
+    preserving backward compatibility.
+    """
+
+    return getattr(message, "message_thread_id", None) or message.message_id
 
 
 @dp.callback_query_handler(StatusCallback.filter())
