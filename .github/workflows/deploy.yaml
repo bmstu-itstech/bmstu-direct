@@ -31,5 +31,4 @@ jobs:
             git stash
             git checkout main
             git pull origin main
-            docker compose -f docker-compose.ci.yaml run --rm migrate
-            docker compose -f docker-compose.ci.yaml up --build -d bot
+            docker compose -f docker-compose.ci.yaml up --build -d
