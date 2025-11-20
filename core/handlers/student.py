@@ -59,20 +59,25 @@ async def send_create_ticket(message: Message):
     await states.Registration.create_ticket.set()
 
 
-@dp.message_handler(StudentFilter(), IsReplyFilter(is_reply=False), content_types=[
-            ContentType.AUDIO,
-            ContentType.DOCUMENT,
-            ContentType.PHOTO,
-            ContentType.STICKER,
-            ContentType.VIDEO,
-            ContentType.VOICE,
-            ContentType.LOCATION,
-            ContentType.CONTACT,
-            ContentType.POLL,
-            ContentType.DICE,
-            ContentType.VIDEO_NOTE,
-            ContentType.ANIMATION,      # GIF
-        ], state="*")
+@dp.message_handler(
+    StudentFilter(),
+    IsReplyFilter(is_reply=False),
+    content_types=[
+        ContentType.AUDIO,
+        ContentType.DOCUMENT,
+        ContentType.PHOTO,
+        ContentType.STICKER,
+        ContentType.VIDEO,
+        ContentType.VOICE,
+        ContentType.LOCATION,
+        ContentType.CONTACT,
+        ContentType.POLL,
+        ContentType.DICE,
+        ContentType.VIDEO_NOTE,
+        ContentType.ANIMATION,  # GIF
+    ],
+    state="*",
+)
 async def handle_no_text(message: Message):
     await message.answer(
         texts.errors.message_no_text,
@@ -84,7 +89,7 @@ async def handle_no_text(message: Message):
     ChatTypeFilter(ChatType.PRIVATE),
     IsReplyFilter(is_reply=True),
     state="*",
-    content_types=[ContentType.TEXT, ContentType.DOCUMENT, ContentType.PHOTO],
+    content_types=[ContentType.ANY],
 )
 async def handle_student_answer(message: Message, store: Storage, album: list[Message] | None = None):
     ticket_ids = await store.chat_ticket_ids(message.chat.id)
@@ -96,9 +101,6 @@ async def handle_student_answer(message: Message, store: Storage, album: list[Me
     except MessageNotFoundException:
         await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
         return
-    answer = escape_swear_words(
-        message.html_caption or message.html_text or message.caption or message.text or ""
-    )
     answer = escape_swear_words(
         message.html_caption or message.html_text or message.caption or message.text or ""
     )
@@ -169,16 +171,20 @@ async def send_student_answer(
             sent = await bot.send_media_group(
                 chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
             )
-    # Если текстовое сообщение
+    # Любые другие типы (видео, аудио и пр.)
     else:
-        sent = [
-            await bot.send_message(
-                config.comment_chat_id,
-                texts.ticket.student_answer(answer),
-                reply_to_message_id=reply_to_id,
-                parse_mode=ParseMode.HTML,
+        target_album = album or [message]
+        sent = []
+        for idx, obj in enumerate(target_album):
+            caption = texts.ticket.student_answer(answer) if idx == 0 else None
+            sent.append(
+                await obj.copy_to(
+                    config.comment_chat_id,
+                    reply_to_message_id=reply_to_id,
+                    caption=caption,
+                    parse_mode=ParseMode.HTML if caption else None,
+                )
             )
-        ]
 
     if message.media_group_id and len(sent) > 1:
         album_messages = album_messages or album or [message]

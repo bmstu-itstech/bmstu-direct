@@ -27,8 +27,11 @@ async def handle_ticket_published(message: Message, store: Storage):
     await store.update_ticket(ticket_id, group_message_id=thread_id)
 
 
-@dp.message_handler(ModeratorFilter(), IsReplyFilter(is_reply=True),
-                    content_types=[ContentType.PHOTO,  ContentType.TEXT, ContentType.DOCUMENT])
+@dp.message_handler(
+    ModeratorFilter(),
+    IsReplyFilter(is_reply=True),
+    content_types=[ContentType.ANY],
+)
 async def handle_moderator_answer(message: Message, store: Storage, album: list[Message] | None = None):
     thread_id = message.message_thread_id or message.message_id
     try:
@@ -106,6 +109,20 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
             reply_to_message_id=reply_to_id,
             parse_mode=ParseMode.HTML,
         )]
+    # Любые другие типы (видео, голосовые и пр.)
+    else:
+        target_album = album or [message]
+        sent = []
+        for idx, obj in enumerate(target_album):
+            caption = texts.ticket.moderator_answer(ticket.id, answer) if idx == 0 else None
+            sent.append(
+                await obj.copy_to(
+                    ticket.owner_chat_id,
+                    reply_to_message_id=reply_to_id,
+                    caption=caption,
+                    parse_mode=ParseMode.HTML if caption else None,
+                )
+            )
 
     await ticket.change_status(Status.IN_PROGRESS) # Обновление статуса
     ticket = await store.update_ticket(ticket.id, status=ticket.status)
