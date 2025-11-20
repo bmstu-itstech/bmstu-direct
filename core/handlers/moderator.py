@@ -31,7 +31,7 @@ async def handle_ticket_published(message: Message, store: Storage):
 async def handle_moderator_answer(message: Message, store: Storage, album: list[Message] | None = None):
     _id = message.__dict__["_values"]["message_thread_id"]
     ticket_id = await store.message_ticket_id(_id)
-    await send_moderator_answer(message, store, album, ticket_id, message.text)
+    await send_moderator_answer(message, store, album, ticket_id, message.html_text)
 
 
 async def send_moderator_answer(message: Message, store: Storage, album: list[Message] | None, ticket_id: int, answer: str):
@@ -52,7 +52,7 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
                                             document=file_id,
                                             reply_to_message_id=reply_to_id,
                                             parse_mode=ParseMode.HTML,
-                                            caption=texts.ticket.moderator_answer(ticket_id, message.caption))]
+                                            caption=texts.ticket.moderator_answer(ticket_id, message.html_caption))]
         else:
             if album:
                 media = [InputMediaDocument(media=album[-1].document.file_id,
@@ -72,11 +72,11 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
             sent = [await bot.send_photo(ticket.owner_chat_id, photo=file_id,
                                                     reply_to_message_id=reply_to_id,
                                                     parse_mode=ParseMode.HTML,
-                                                    caption=texts.ticket.moderator_answer(ticket.id, message.caption))]
+                                                    caption=texts.ticket.moderator_answer(ticket.id, message.html_caption))]
         else:
             if album:
                 media = [InputMediaPhoto(media=album[0].photo[-1].file_id,
-                                                     caption=texts.ticket.moderator_answer(ticket.id, message.caption),
+                                                     caption=texts.ticket.moderator_answer(ticket.id, message.html_caption),
                                                      parse_mode=ParseMode.HTML)]
                 for obj in album[1:]:
                     file_id = obj.photo[-1].file_id
