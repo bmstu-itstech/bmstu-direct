@@ -1,3 +1,4 @@
+import html
 import logging
 import re
 
@@ -50,7 +51,8 @@ async def handle_moderator_answer(message: Message, store: Storage, album: list[
         else:
             logger.info("Ticket not found for moderator answer without reply metadata")
             return
-    await send_moderator_answer(message, store, album, ticket_id, message.html_text)
+    answer = extract_message_html(message) or ""
+    await send_moderator_answer(message, store, album, ticket_id, answer)
 
 
 async def send_moderator_answer(message: Message, store: Storage, album: list[Message] | None, ticket_id: int, answer: str):
@@ -73,7 +75,7 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
                                             document=file_id,
                                             reply_to_message_id=reply_to_id,
                                             parse_mode=ParseMode.HTML,
-                                            caption=texts.ticket.moderator_answer(ticket_id, message.html_caption))]
+                                            caption=texts.ticket.moderator_answer(ticket_id, answer))]
         else:
             album_messages = album or [message]
             media = []
@@ -81,7 +83,7 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
                 media.append(
                     InputMediaDocument(
                         media=obj.document.file_id,
-                        caption=texts.ticket.moderator_answer(ticket.id, message.html_caption) if idx == 0 else None,
+                        caption=texts.ticket.moderator_answer(ticket.id, answer) if idx == 0 else None,
                         parse_mode=ParseMode.HTML if idx == 0 else None,
                     )
                 )
@@ -94,11 +96,11 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
             sent = [await bot.send_photo(ticket.owner_chat_id, photo=file_id,
                                                     reply_to_message_id=reply_to_id,
                                                     parse_mode=ParseMode.HTML,
-                                                    caption=texts.ticket.moderator_answer(ticket.id, message.html_caption))]
+                                                    caption=texts.ticket.moderator_answer(ticket.id, answer))]
         else:
             album_messages = album or [message]
             media = [InputMediaPhoto(media=album_messages[0].photo[-1].file_id,
-                                                 caption=texts.ticket.moderator_answer(ticket.id, message.html_caption),
+                                                 caption=texts.ticket.moderator_answer(ticket.id, answer),
                                                  parse_mode=ParseMode.HTML)]
             for obj in album_messages[1:]:
                 file_id = obj.photo[-1].file_id
@@ -202,6 +204,14 @@ def extract_ticket_id_from_message(message: Message) -> int | None:
             return extract_ticket_id(text)
         except ValueError:
             continue
+    return None
+
+
+def extract_message_html(message: Message) -> str | None:
+    for field in ("html_text", "html_caption", "text", "caption"):
+        value = getattr(message, field, None)
+        if value:
+            return html.unescape(value)
     return None
 
 
