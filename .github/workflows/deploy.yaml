@@ -26,6 +26,7 @@ jobs:
           username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script_stop: true
+          envs: ADMIN_IDS, COMMENT_CHAT_ID, CHANNEL_CHAT_ID, DATABASE_URI, TELEGRAM_BOT_TOKEN
           script: |
             cd ${{ vars.PROJECT_DIR }}
             git stash
