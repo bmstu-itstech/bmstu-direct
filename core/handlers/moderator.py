@@ -172,7 +172,7 @@ def extract_ticket_id(s: str) -> int:
     if match:
         return int(match.group(1))
 
-    match = re.search(r"\b(\d{3,})\b", s)
+    match = re.search(r"Обращение[^\n]*?(\d+)", s)
     if match:
         return int(match.group(1))
 
