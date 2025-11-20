@@ -208,10 +208,15 @@ def extract_ticket_id_from_message(message: Message) -> int | None:
 
 
 def extract_message_html(message: Message) -> str | None:
-    for field in ("html_text", "html_caption", "text", "caption"):
+    for field in ("html_text", "html_caption"):
         value = getattr(message, field, None)
         if value:
-            return html.unescape(value)
+            return value
+
+    for field in ("text", "caption"):
+        value = getattr(message, field, None)
+        if value:
+            return html.escape(value)
     return None
 
 
