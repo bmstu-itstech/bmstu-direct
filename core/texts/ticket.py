@@ -62,8 +62,7 @@ choice_approve = \
 ticket_content_message_template = compiler.compile("\n".join((
     "<b>Обращение</b> <code>{{as_ticket_id ticket.id }}</code>",
     "",
-    "📩 Текст обращения:",
-    "{{ticket.text}}",
+    "{{{ticket.text}}}",
 )))
 
 ticket_meta_message_template = compiler.compile("\n".join((

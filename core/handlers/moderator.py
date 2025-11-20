@@ -1,4 +1,5 @@
 import logging
+import re
 
 from aiogram.dispatcher.filters import ForwardedMessageFilter, IsReplyFilter
 from aiogram.types import Message, ParseMode, ContentType, InputMediaPhoto, InputMediaDocument, CallbackQuery
@@ -116,11 +117,15 @@ async def update_ticket_message(ticket: domain.TicketRecord):
 
 
 def extract_ticket_id(s: str) -> int:
-    i = s.find(" ")
-    j = s.find("\n", i)
-    if j < 0:
-        j = len(s)
-    return int(s[i+1:j])
+    match = re.search(r"<code>(\d+)</code>", s)
+    if match:
+        return int(match.group(1))
+
+    match = re.search(r"\b(\d{3,})\b", s)
+    if match:
+        return int(match.group(1))
+
+    raise ValueError("Ticket id not found in message")
 
 
 @dp.callback_query_handler(StatusCallback.filter())
