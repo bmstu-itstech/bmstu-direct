@@ -545,14 +545,7 @@ async def handle_input_text(message: Message, state: FSMContext, album: list[Mes
     if not text:
         text = "Без текстового описания"
 
-    attachments: list[Attachment] | None = None
-    if message.content_type != ContentType.TEXT:
-        source_messages = album if message.media_group_id and album else [message]
-        attachments = [
-            attachment
-            for msg in source_messages
-            if (attachment := message_to_attachment(msg)) is not None
-        ]
+    attachments = collect_attachments(message, album)
 
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
@@ -572,6 +565,20 @@ async def send_choice_processing_pd(message: Message):
         parse_mode=ParseMode.HTML,
     )
     await states.Registration.choice_processing_pd.set()
+
+
+def collect_attachments(message: Message, album: list[Message] | None) -> list[Attachment]:
+    """Extract supported attachments from the current message or album."""
+
+    source_messages = album if message.media_group_id and album else [message]
+    attachments: list[Attachment] = []
+
+    for msg in source_messages:
+        attachment = message_to_attachment(msg)
+        if attachment:
+            attachments.append(attachment)
+
+    return attachments
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_processing_pd)
