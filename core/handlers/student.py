@@ -3,7 +3,15 @@ import re
 
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import ChatTypeFilter, IsReplyFilter
-from aiogram.types import Message, ReplyKeyboardRemove, ParseMode, ChatType, ContentType
+from aiogram.types import (
+    ChatType,
+    ContentType,
+    InputMediaDocument,
+    InputMediaPhoto,
+    Message,
+    ParseMode,
+    ReplyKeyboardRemove,
+)
 
 from core import texts
 from core import states
@@ -51,7 +59,7 @@ async def send_create_ticket(message: Message):
     await states.Registration.create_ticket.set()
 
 
-@dp.message_handler(StudentFilter(), content_types=[
+@dp.message_handler(StudentFilter(), IsReplyFilter(is_reply=False), content_types=[
             ContentType.AUDIO,
             ContentType.DOCUMENT,
             ContentType.PHOTO,
@@ -72,30 +80,103 @@ async def handle_no_text(message: Message):
     )
 
 
-@dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), IsReplyFilter(is_reply=True), state="*")
-async def handle_student_answer(message: Message, store: Storage):
+@dp.message_handler(
+    ChatTypeFilter(ChatType.PRIVATE),
+    IsReplyFilter(is_reply=True),
+    state="*",
+    content_types=[ContentType.TEXT, ContentType.DOCUMENT, ContentType.PHOTO],
+)
+async def handle_student_answer(message: Message, store: Storage, album: list[Message] | None = None):
     ticket_ids = await store.chat_ticket_ids(message.chat.id)
     replied_message = await store.message_by_id(
         ticket_ids=ticket_ids,
         owner_message_id=message.reply_to_message.message_id,
     )
-    answer = escape_swear_words(message.text)
-    await send_student_answer(message, store, replied_message, answer)
-
-
-async def send_student_answer(message: Message, store: Storage, replied_message: domain.Message, answer: str):
-    sent = await bot.send_message(
-        config.comment_chat_id,
-        texts.ticket.student_answer(answer),
-        reply_to_message_id=replied_message.message_id,
-        parse_mode=ParseMode.HTML,
+    answer = escape_swear_words(
+        message.html_caption or message.html_text or message.caption or message.text or ""
     )
+    await send_student_answer(message, store, replied_message, answer, album)
+
+
+async def send_student_answer(
+    message: Message,
+    store: Storage,
+    replied_message: domain.Message,
+    answer: str,
+    album: list[Message] | None,
+):
+    reply_to_id = replied_message.message_id
+    # Если документ
+    if message.content_type == ContentType.DOCUMENT:
+        if message.media_group_id is None:
+            file_id = message.document.file_id
+            sent = [
+                await bot.send_document(
+                    config.comment_chat_id,
+                    document=file_id,
+                    reply_to_message_id=reply_to_id,
+                    parse_mode=ParseMode.HTML,
+                    caption=texts.ticket.student_answer(answer),
+                )
+            ]
+        else:
+            media = []
+            album_messages = album or [message]
+            for idx, obj in enumerate(album_messages):
+                media.append(
+                    InputMediaDocument(
+                        media=obj.document.file_id,
+                        caption=texts.ticket.student_answer(answer) if idx == 0 else None,
+                        parse_mode=ParseMode.HTML if idx == 0 else None,
+                    )
+                )
+            sent = await bot.send_media_group(
+                chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
+            )
+    # Если фото
+    elif message.content_type == ContentType.PHOTO:
+        if message.media_group_id is None:
+            file_id = message.photo[-1].file_id
+            sent = [
+                await bot.send_photo(
+                    config.comment_chat_id,
+                    photo=file_id,
+                    reply_to_message_id=reply_to_id,
+                    parse_mode=ParseMode.HTML,
+                    caption=texts.ticket.student_answer(answer),
+                )
+            ]
+        else:
+            media = []
+            album_messages = album or [message]
+            for idx, obj in enumerate(album_messages):
+                media.append(
+                    InputMediaPhoto(
+                        media=obj.photo[-1].file_id,
+                        caption=texts.ticket.student_answer(answer) if idx == 0 else None,
+                        parse_mode=ParseMode.HTML if idx == 0 else None,
+                    )
+                )
+            sent = await bot.send_media_group(
+                chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
+            )
+    # Если текстовое сообщение
+    else:
+        sent = [
+            await bot.send_message(
+                config.comment_chat_id,
+                texts.ticket.student_answer(answer),
+                reply_to_message_id=reply_to_id,
+                parse_mode=ParseMode.HTML,
+            )
+        ]
+
     await store.save_message(
         domain.Message(
-            chat_id=sent.chat.id,
-            message_id=sent.message_id,
+            chat_id=sent[0].chat.id,
+            message_id=sent[0].message_id,
             owner_message_id=message.message_id,
-            reply_to_message_id=sent.reply_to_message.message_id,
+            reply_to_message_id=sent[0].reply_to_message.message_id,
             ticket_id=replied_message.ticket_id,
         )
     )
