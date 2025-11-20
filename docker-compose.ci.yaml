@@ -1,0 +1,10 @@
+services:
+  bot:
+    container_name: direct-bot
+    build: .
+    environment:
+      ADMIN_IDS: ${ADMIN_IDS:-}
+      COMMENT_CHAT_ID: $COMMENT_CHAT_ID
+      CHANNEL_CHAT_ID: $CHANNEL_CHAT_ID
+      DATABASE_URI: $DATABASE_URI
+      TELEGRAM_BOT_TOKEN: $TELEGRAM_BOT_TOKEN
