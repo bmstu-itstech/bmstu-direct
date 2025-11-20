@@ -22,20 +22,9 @@ logger = logging.getLogger(__name__)
 
 @dp.message_handler(ModeratorFilter(), ForwardedMessageFilter(is_forwarded=True))
 async def handle_ticket_published(message: Message, store: Storage):
-    text_source = message.html_text or message.text or message.caption or ""
-
-    try:
-        ticket_id = extract_ticket_id(text_source)
-    except ValueError:
-        logger.info("Failed to extract ticket id from forwarded message")
-        return
-
+    ticket_id = extract_ticket_id(message.text)
     thread_id = _thread_or_message_id(message)
-
-    try:
-        await store.update_ticket(ticket_id, group_message_id=thread_id)
-    except TicketNotFoundException:
-        logger.info("Ticket %s not found when saving group message id %s", ticket_id, thread_id)
+    await store.update_ticket(ticket_id, group_message_id=thread_id)
 
 
 @dp.message_handler(
