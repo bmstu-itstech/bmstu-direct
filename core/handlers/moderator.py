@@ -112,12 +112,17 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
     await update_ticket_message(ticket)
 
     if message.media_group_id and len(sent) > 1:
-        album_messages = album_messages or album or [message]
-        for reply_msg, owner_msg in zip(sent, album_messages):
+        album_messages = album or album_messages
+        if not album_messages or len(album_messages) != len(sent):
+            logger.warning("Album messages are missing or do not match sent group size; using primary message id as fallback")
+
+        for idx, reply_msg in enumerate(sent):
+            source_msg = album_messages[idx] if album_messages and idx < len(album_messages) else message
+
             await store.save_message(
                 domain.Message(
                     chat_id=message.chat.id,
-                    message_id=owner_msg.message_id,
+                    message_id=source_msg.message_id,
                     owner_message_id=reply_msg.message_id,
                     reply_to_message_id=reply_msg.reply_to_message.message_id if reply_msg.reply_to_message else reply_to_id,
                     ticket_id=ticket_id,
