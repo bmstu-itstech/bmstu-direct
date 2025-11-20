@@ -78,6 +78,17 @@ def message_to_attachment(message: Message) -> Attachment | None:
     )
 
 
+def extract_message_text(message: Message) -> str:
+    raw_text = (
+        getattr(message, "html_text", None)
+        or getattr(message, "text", None)
+        or getattr(message, "caption", None)
+        or ""
+    )
+
+    return escape_swear_words(raw_text)
+
+
 def make_input_media(attachment: Attachment, caption: str | None = None):
     match attachment["type"]:
         case ContentType.PHOTO:
@@ -234,9 +245,7 @@ async def handle_student_answer(message: Message, store: Storage, album: list[Me
     except MessageNotFoundException:
         await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
         return
-    answer = escape_swear_words(
-        message.html_caption or message.html_text or message.caption or message.text or ""
-    )
+    answer = extract_message_text(message)
     await send_student_answer(message, store, replied_message, answer, album)
 
 
@@ -538,9 +547,7 @@ async def send_input_text(message: Message):
     content_types=[ContentType.ANY],
 )
 async def handle_input_text(message: Message, state: FSMContext, album: list[Message] | None = None):
-    text = escape_swear_words(
-        message.html_caption or message.html_text or message.caption or message.text or ""
-    )
+    text = extract_message_text(message)
 
     if not text:
         text = "Без текстового описания"
