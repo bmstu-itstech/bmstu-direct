@@ -1,0 +1,34 @@
+name: Deploy CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ADMIN_IDS: ${{ vars.ADMIN_IDS }}
+          COMMENT_CHAT_ID: ${{ vars.COMMENT_CHAT_ID }}
+          CHANNEL_CHAT_ID: ${{ vars.CHANNEL_CHAT_ID }}
+          DATABASE_URI: ${{ secrets.DATABASE_URI }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        with:
+          host: ${{ vars.SSH_HOST }}
+          port: ${{ vars.SSH_PORT }}
+          username: ${{ vars.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          script: |
+            cd ${{ vars.PROJECT_DIR }}
+            git stash
+            git checkout main
+            git pull origin main
+            docker compose -f docker-compose.ci.yaml up --build -d
