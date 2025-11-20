@@ -8,7 +8,7 @@ from core import domain, texts
 
 from common.repository import dp, bot
 from core.filters.role import ModeratorFilter
-from services.db.storage import Storage, MessageNotFoundException
+from services.db.storage import Storage, MessageNotFoundException, TicketNotFoundException
 from config import config
 
 from core.domain.status import Status
@@ -23,14 +23,27 @@ logger = logging.getLogger(__name__)
 @dp.message_handler(ModeratorFilter(), ForwardedMessageFilter(is_forwarded=True))
 async def handle_ticket_published(message: Message, store: Storage):
     ticket_id = extract_ticket_id(message.text)
-    await store.update_ticket(ticket_id, group_message_id=message.message_id)
+    thread_id = message.message_thread_id or message.message_id
+    await store.update_ticket(ticket_id, group_message_id=thread_id)
 
 
 @dp.message_handler(ModeratorFilter(), IsReplyFilter(is_reply=True),
                     content_types=[ContentType.PHOTO,  ContentType.TEXT, ContentType.DOCUMENT])
 async def handle_moderator_answer(message: Message, store: Storage, album: list[Message] | None = None):
-    _id = message.__dict__["_values"]["message_thread_id"]
-    ticket_id = await store.message_ticket_id(_id)
+    thread_id = message.message_thread_id or message.message_id
+    try:
+        ticket_id = await store.message_ticket_id(thread_id)
+    except TicketNotFoundException:
+        if message.reply_to_message:
+            try:
+                replied_message = await store.message_id(message.reply_to_message.message_id)
+                ticket_id = replied_message.ticket_id
+            except MessageNotFoundException:
+                logger.info("Ticket not found for moderator answer and reply mapping failed")
+                return
+        else:
+            logger.info("Ticket not found for moderator answer without reply metadata")
+            return
     await send_moderator_answer(message, store, album, ticket_id, message.html_text)
 
 
