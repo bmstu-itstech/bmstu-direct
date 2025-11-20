@@ -3,7 +3,15 @@ import re
 
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import ChatTypeFilter, IsReplyFilter
-from aiogram.types import Message, ReplyKeyboardRemove, ParseMode, ChatType, ContentType
+from aiogram.types import (
+    ChatType,
+    ContentType,
+    InputMediaDocument,
+    InputMediaPhoto,
+    Message,
+    ParseMode,
+    ReplyKeyboardRemove,
+)
 
 from core import texts
 from core import states
@@ -12,7 +20,7 @@ from core.domain import TicketRecord, Status
 from core.handlers import keyboards
 from common.repository import dp, bot
 from common.swear_words import escape_swear_words
-from services.db.storage import Storage
+from services.db.storage import MessageNotFoundException, Storage
 from core.filters.role import StudentFilter
 
 from config import config
@@ -51,7 +59,7 @@ async def send_create_ticket(message: Message):
     await states.Registration.create_ticket.set()
 
 
-@dp.message_handler(StudentFilter(), content_types=[
+@dp.message_handler(StudentFilter(), IsReplyFilter(is_reply=False), content_types=[
             ContentType.AUDIO,
             ContentType.DOCUMENT,
             ContentType.PHOTO,
@@ -72,30 +80,94 @@ async def handle_no_text(message: Message):
     )
 
 
-@dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), IsReplyFilter(is_reply=True), state="*")
-async def handle_student_answer(message: Message, store: Storage):
+@dp.message_handler(
+    ChatTypeFilter(ChatType.PRIVATE),
+    IsReplyFilter(is_reply=True),
+    state="*",
+    content_types=ContentType.ANY,
+)
+async def handle_student_answer(message: Message, store: Storage, album: list[Message] | None = None):
     ticket_ids = await store.chat_ticket_ids(message.chat.id)
-    replied_message = await store.message_by_id(
-        ticket_ids=ticket_ids,
-        owner_message_id=message.reply_to_message.message_id,
+    try:
+        replied_message = await store.message_by_id(
+            ticket_ids=ticket_ids,
+            owner_message_id=message.reply_to_message.message_id,
+        )
+    except MessageNotFoundException:
+        await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
+        return
+    answer = escape_swear_words(
+        message.html_caption or message.html_text or message.caption or message.text or ""
     )
-    answer = escape_swear_words(message.text)
-    await send_student_answer(message, store, replied_message, answer)
+    await send_student_answer(message, store, replied_message, answer, album)
 
 
-async def send_student_answer(message: Message, store: Storage, replied_message: domain.Message, answer: str):
-    sent = await bot.send_message(
-        config.comment_chat_id,
-        texts.ticket.student_answer(answer),
-        reply_to_message_id=replied_message.message_id,
-        parse_mode=ParseMode.HTML,
-    )
+async def send_student_answer(
+    message: Message,
+    store: Storage,
+    replied_message: domain.Message,
+    answer: str,
+    album: list[Message] | None,
+):
+    reply_to_id = replied_message.message_id
+    if message.content_type == ContentType.TEXT:
+        sent = [
+            await bot.send_message(
+                config.comment_chat_id,
+                texts.ticket.student_answer(answer),
+                reply_to_message_id=reply_to_id,
+                parse_mode=ParseMode.HTML,
+            )
+        ]
+    elif message.media_group_id is None:
+        sent = [
+            await message.copy_to(
+                config.comment_chat_id,
+                caption=texts.ticket.student_answer(answer),
+                parse_mode=ParseMode.HTML,
+                reply_to_message_id=reply_to_id,
+            )
+        ]
+    elif message.content_type == ContentType.DOCUMENT:
+        media = []
+        album_messages = album or [message]
+        for idx, obj in enumerate(album_messages):
+            media.append(
+                InputMediaDocument(
+                    media=obj.document.file_id,
+                    caption=texts.ticket.student_answer(answer) if idx == 0 else None,
+                    parse_mode=ParseMode.HTML if idx == 0 else None,
+                )
+            )
+        sent = await bot.send_media_group(
+            chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
+        )
+    elif message.content_type == ContentType.PHOTO:
+        media = []
+        album_messages = album or [message]
+        for idx, obj in enumerate(album_messages):
+            media.append(
+                InputMediaPhoto(
+                    media=obj.photo[-1].file_id,
+                    caption=texts.ticket.student_answer(answer) if idx == 0 else None,
+                    parse_mode=ParseMode.HTML if idx == 0 else None,
+                )
+            )
+        sent = await bot.send_media_group(
+            chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
+        )
+    else:
+        await message.answer(texts.errors.message_no_text, parse_mode=ParseMode.HTML)
+        return
+
     await store.save_message(
         domain.Message(
-            chat_id=sent.chat.id,
-            message_id=sent.message_id,
+            chat_id=sent[0].chat.id,
+            message_id=sent[0].message_id,
             owner_message_id=message.message_id,
-            reply_to_message_id=sent.reply_to_message.message_id,
+            reply_to_message_id=(
+                sent[0].reply_to_message.message_id if sent[0].reply_to_message else reply_to_id
+            ),
             ticket_id=replied_message.ticket_id,
         )
     )
