@@ -205,10 +205,12 @@ async def send_create_ticket(message: Message):
     ],
     state="*",
 )
-async def handle_no_text(message: Message, state: FSMContext):
+async def handle_no_text(
+    message: Message, state: FSMContext, album: list[Message] | None = None
+):
     current_state = await state.get_state()
     if current_state == states.Registration.input_text.state:
-        return
+        return await handle_input_text(message, state, album)
 
     await message.answer(
         texts.errors.message_no_text,
