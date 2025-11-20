@@ -42,8 +42,11 @@ async def handle_moderator_answer(message: Message, store: Storage, album: list[
                 replied_message = await store.message_id(message.reply_to_message.message_id)
                 ticket_id = replied_message.ticket_id
             except MessageNotFoundException:
-                logger.info("Ticket not found for moderator answer and reply mapping failed")
-                return
+                ticket_id = extract_ticket_id_from_message(message.reply_to_message)
+                if ticket_id is None:
+                    logger.info("Ticket not found for moderator answer and reply mapping failed")
+                    return
+                logger.info("Ticket id extracted from reply message text after missing mapping")
         else:
             logger.info("Ticket not found for moderator answer without reply metadata")
             return
@@ -188,6 +191,18 @@ def _thread_or_message_id(message: Message) -> int:
     """
 
     return getattr(message, "message_thread_id", None) or message.message_id
+
+
+def extract_ticket_id_from_message(message: Message) -> int | None:
+    for field in ("html_text", "text", "caption", "html_caption"):
+        text = getattr(message, field, None)
+        if not text:
+            continue
+        try:
+            return extract_ticket_id(text)
+        except ValueError:
+            continue
+    return None
 
 
 @dp.callback_query_handler(StatusCallback.filter())
