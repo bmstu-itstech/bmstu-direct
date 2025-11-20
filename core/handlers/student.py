@@ -282,7 +282,7 @@ async def send_input_text(message: Message):
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_text)
 async def handle_input_text(message: Message, state: FSMContext):
-    text = escape_swear_words(message.text)
+    text = escape_swear_words(message.html_text or message.text)
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
         if not data[DATA_ANONYM_KEY]:
