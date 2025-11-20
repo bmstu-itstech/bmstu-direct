@@ -117,7 +117,7 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
             await store.save_message(
                 domain.Message(
                     chat_id=message.chat.id,
-                    message_id=message.message_id,
+                    message_id=owner_msg.message_id,
                     owner_message_id=reply_msg.message_id,
                     reply_to_message_id=reply_msg.reply_to_message.message_id if reply_msg.reply_to_message else reply_to_id,
                     ticket_id=ticket_id,
