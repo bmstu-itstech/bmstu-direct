@@ -171,6 +171,16 @@ async def send_student_answer(
             sent = await bot.send_media_group(
                 chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
             )
+    # Текстовые сообщения
+    elif message.content_type == ContentType.TEXT:
+        sent = [
+            await bot.send_message(
+                config.comment_chat_id,
+                texts.ticket.student_answer(answer),
+                reply_to_message_id=reply_to_id,
+                parse_mode=ParseMode.HTML,
+            )
+        ]
     # Любые другие типы (видео, аудио и пр.)
     else:
         target_album = album or [message]
