@@ -8,7 +8,7 @@ from core import domain, texts
 
 from common.repository import dp, bot
 from core.filters.role import ModeratorFilter
-from services.db.storage import Storage, MessageNotFoundException
+from services.db.storage import Storage, MessageNotFoundException, TicketNotFoundException
 from config import config
 
 from core.domain.status import Status
@@ -23,26 +23,45 @@ logger = logging.getLogger(__name__)
 @dp.message_handler(ModeratorFilter(), ForwardedMessageFilter(is_forwarded=True))
 async def handle_ticket_published(message: Message, store: Storage):
     ticket_id = extract_ticket_id(message.text)
-    await store.update_ticket(ticket_id, group_message_id=message.message_id)
+    thread_id = message.message_thread_id or message.message_id
+    await store.update_ticket(ticket_id, group_message_id=thread_id)
 
 
-@dp.message_handler(ModeratorFilter(), IsReplyFilter(is_reply=True),
-                    content_types=[ContentType.PHOTO,  ContentType.TEXT, ContentType.DOCUMENT])
+@dp.message_handler(
+    ModeratorFilter(),
+    IsReplyFilter(is_reply=True),
+    content_types=[ContentType.ANY],
+)
 async def handle_moderator_answer(message: Message, store: Storage, album: list[Message] | None = None):
-    _id = message.__dict__["_values"]["message_thread_id"]
-    ticket_id = await store.message_ticket_id(_id)
-    await send_moderator_answer(message, store, album, ticket_id, message.html_text)
+    thread_id = message.message_thread_id or message.message_id
+    try:
+        ticket_id = await store.message_ticket_id(thread_id)
+    except TicketNotFoundException:
+        if message.reply_to_message:
+            try:
+                replied_message = await store.message_id(message.reply_to_message.message_id)
+                ticket_id = replied_message.ticket_id
+            except MessageNotFoundException:
+                logger.info("Ticket not found for moderator answer and reply mapping failed")
+                return
+        else:
+            logger.info("Ticket not found for moderator answer without reply metadata")
+            return
+    answer_text = message.html_caption or message.html_text or message.caption or message.text or ""
+    await send_moderator_answer(message, store, album, ticket_id, answer_text)
 
 
 async def send_moderator_answer(message: Message, store: Storage, album: list[Message] | None, ticket_id: int, answer: str):
     ticket = await store.ticket(ticket_id)
     reply_to_id = None
+    album_messages: list[Message] | None = None
     try:
         replied_message = await store.message_id(message.reply_to_message.message_id)
         reply_to_id = replied_message.owner_message_id
     except MessageNotFoundException:
         logger.info(f"Message {reply_to_id} to reply not found")
 
+    sent: list[Message]
     # Если документ
     if  message.content_type == ContentType.DOCUMENT:
         # Если одиночный документ
@@ -54,16 +73,17 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
                                             parse_mode=ParseMode.HTML,
                                             caption=texts.ticket.moderator_answer(ticket_id, message.html_caption))]
         else:
-            if album:
-                media = [InputMediaDocument(media=album[-1].document.file_id,
-                                            # caption=texts.ticket.moderator_answer(ticket.id, message.caption),
-                                            parse_mode=ParseMode.HTML)]
-                album.reverse()
-                for obj in album[1:]:
-                    file_id = obj.document.file_id
-                    media.append(InputMediaDocument(media=file_id))
-                media.reverse()
-                sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
+            album_messages = album or [message]
+            media = []
+            for idx, obj in enumerate(album_messages):
+                media.append(
+                    InputMediaDocument(
+                        media=obj.document.file_id,
+                        caption=texts.ticket.moderator_answer(ticket.id, message.html_caption) if idx == 0 else None,
+                        parse_mode=ParseMode.HTML if idx == 0 else None,
+                    )
+                )
+            sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
     # Если фото
     elif message.content_type == ContentType.PHOTO:
         # если одиночное фото
@@ -74,14 +94,14 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
                                                     parse_mode=ParseMode.HTML,
                                                     caption=texts.ticket.moderator_answer(ticket.id, message.html_caption))]
         else:
-            if album:
-                media = [InputMediaPhoto(media=album[0].photo[-1].file_id,
-                                                     caption=texts.ticket.moderator_answer(ticket.id, message.html_caption),
-                                                     parse_mode=ParseMode.HTML)]
-                for obj in album[1:]:
-                    file_id = obj.photo[-1].file_id
-                    media.append(InputMediaPhoto(media=file_id))
-                sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
+            album_messages = album or [message]
+            media = [InputMediaPhoto(media=album_messages[0].photo[-1].file_id,
+                                                 caption=texts.ticket.moderator_answer(ticket.id, message.html_caption),
+                                                 parse_mode=ParseMode.HTML)]
+            for obj in album_messages[1:]:
+                file_id = obj.photo[-1].file_id
+                media.append(InputMediaPhoto(media=file_id))
+            sent = await bot.send_media_group(chat_id=ticket.owner_chat_id, media=media, reply_to_message_id=reply_to_id)
     # Если текстовое сообщение
     elif message.content_type == ContentType.TEXT:
         sent = [await bot.send_message(
@@ -90,20 +110,47 @@ async def send_moderator_answer(message: Message, store: Storage, album: list[Me
             reply_to_message_id=reply_to_id,
             parse_mode=ParseMode.HTML,
         )]
+    # Любые другие типы (видео, голосовые и пр.)
+    else:
+        target_album = album or [message]
+        sent = []
+        for idx, obj in enumerate(target_album):
+            caption = texts.ticket.moderator_answer(ticket.id, answer) if idx == 0 else None
+            sent.append(
+                await obj.copy_to(
+                    ticket.owner_chat_id,
+                    reply_to_message_id=reply_to_id,
+                    caption=caption,
+                    parse_mode=ParseMode.HTML if caption else None,
+                )
+            )
 
     await ticket.change_status(Status.IN_PROGRESS) # Обновление статуса
     ticket = await store.update_ticket(ticket.id, status=ticket.status)
     await update_ticket_message(ticket)
 
-    await store.save_message(
-        domain.Message(
-            chat_id=message.chat.id,
-            message_id=message.message_id,
-            owner_message_id=sent[0].message_id if not message.media_group_id else sent[0].message_id,
-            reply_to_message_id=sent[0].reply_to_message.message_id if sent[0].reply_to_message else None,
-            ticket_id=ticket_id,
+    if message.media_group_id and len(sent) > 1:
+        album_messages = album_messages or album or [message]
+        for reply_msg, owner_msg in zip(sent, album_messages):
+            await store.save_message(
+                domain.Message(
+                    chat_id=message.chat.id,
+                    message_id=message.message_id,
+                    owner_message_id=reply_msg.message_id,
+                    reply_to_message_id=reply_msg.reply_to_message.message_id if reply_msg.reply_to_message else reply_to_id,
+                    ticket_id=ticket_id,
+                )
+            )
+    else:
+        await store.save_message(
+            domain.Message(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                owner_message_id=sent[0].message_id,
+                reply_to_message_id=sent[0].reply_to_message.message_id if sent[0].reply_to_message else reply_to_id,
+                ticket_id=ticket_id,
+            )
         )
-    )
 
 
 async def update_ticket_message(ticket: domain.TicketRecord):
