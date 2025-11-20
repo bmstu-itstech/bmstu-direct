@@ -185,13 +185,6 @@ def extract_ticket_id(s: str) -> int:
 
 
 def _thread_or_message_id(message: Message) -> int:
-    """Return thread identifier if available, otherwise fallback to message id.
-
-    Some message types in aiogram may not contain ``message_thread_id`` attribute
-    (e.g. private chats). Using ``getattr`` avoids ``AttributeError`` while
-    preserving backward compatibility.
-    """
-
     return getattr(message, "message_thread_id", None) or message.message_id
 
 
