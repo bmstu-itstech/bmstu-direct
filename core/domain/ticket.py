@@ -34,8 +34,8 @@ class Ticket:
         from_status = self.status
 
         if from_status == to_status:
-            raise InvalidStatusChangeException(from_status, to_status)
-        
+            return
+
         self.status = to_status
         
 
