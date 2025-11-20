@@ -20,7 +20,7 @@ from core.domain import TicketRecord, Status
 from core.handlers import keyboards
 from common.repository import dp, bot
 from common.swear_words import escape_swear_words
-from services.db.storage import Storage
+from services.db.storage import MessageNotFoundException, Storage
 from core.filters.role import StudentFilter
 
 from config import config
@@ -88,9 +88,16 @@ async def handle_no_text(message: Message):
 )
 async def handle_student_answer(message: Message, store: Storage, album: list[Message] | None = None):
     ticket_ids = await store.chat_ticket_ids(message.chat.id)
-    replied_message = await store.message_by_id(
-        ticket_ids=ticket_ids,
-        owner_message_id=message.reply_to_message.message_id,
+    try:
+        replied_message = await store.message_by_id(
+            ticket_ids=ticket_ids,
+            owner_message_id=message.reply_to_message.message_id,
+        )
+    except MessageNotFoundException:
+        await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
+        return
+    answer = escape_swear_words(
+        message.html_caption or message.html_text or message.caption or message.text or ""
     )
     answer = escape_swear_words(
         message.html_caption or message.html_text or message.caption or message.text or ""
