@@ -6,12 +6,16 @@ from aiogram.dispatcher.filters import ChatTypeFilter, IsReplyFilter
 from aiogram.types import (
     ChatType,
     ContentType,
+    InputMediaAnimation,
+    InputMediaAudio,
     InputMediaDocument,
     InputMediaPhoto,
+    InputMediaVideo,
     Message,
     ParseMode,
     ReplyKeyboardRemove,
 )
+from typing import TypedDict
 
 from core import texts
 from core import states
@@ -34,9 +38,132 @@ DATA_ANONYM_KEY = "is_anonym"
 DATA_FULL_NAME_KEY = "full_name"
 DATA_STUDY_GROUP_KEY = "study_group"
 DATA_TEXT_KEY = "text"
+DATA_ATTACHMENTS_KEY = "attachments"
 
 
 logger = logging.getLogger(__name__)
+
+
+class Attachment(TypedDict):
+    type: ContentType
+    file_id: str
+    media_group_id: str | None
+
+
+def message_to_attachment(message: Message) -> Attachment | None:
+    match message.content_type:
+        case ContentType.PHOTO:
+            file_id = message.photo[-1].file_id
+        case ContentType.DOCUMENT:
+            file_id = message.document.file_id
+        case ContentType.VIDEO:
+            file_id = message.video.file_id
+        case ContentType.AUDIO:
+            file_id = message.audio.file_id
+        case ContentType.VOICE:
+            file_id = message.voice.file_id
+        case ContentType.VIDEO_NOTE:
+            file_id = message.video_note.file_id
+        case ContentType.ANIMATION:
+            file_id = message.animation.file_id
+        case ContentType.STICKER:
+            file_id = message.sticker.file_id
+        case _:
+            return None
+
+    return Attachment(
+        type=message.content_type,
+        file_id=file_id,
+        media_group_id=message.media_group_id,
+    )
+
+
+def make_input_media(attachment: Attachment, caption: str | None = None):
+    match attachment["type"]:
+        case ContentType.PHOTO:
+            return InputMediaPhoto(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.DOCUMENT:
+            return InputMediaDocument(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.VIDEO:
+            return InputMediaVideo(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.AUDIO:
+            return InputMediaAudio(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.ANIMATION:
+            return InputMediaAnimation(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+    raise ValueError(f"Unsupported media group type: {attachment['type']}")
+
+
+async def send_single_attachment(attachment: Attachment, reply_to: int | None) -> Message:
+    match attachment["type"]:
+        case ContentType.PHOTO:
+            return await bot.send_photo(
+                config.channel_chat_id,
+                photo=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.DOCUMENT:
+            return await bot.send_document(
+                config.channel_chat_id,
+                document=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.VIDEO:
+            return await bot.send_video(
+                config.channel_chat_id,
+                video=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.AUDIO:
+            return await bot.send_audio(
+                config.channel_chat_id,
+                audio=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.VOICE:
+            return await bot.send_voice(
+                config.channel_chat_id,
+                voice=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.VIDEO_NOTE:
+            return await bot.send_video_note(
+                config.channel_chat_id,
+                video_note=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.ANIMATION:
+            return await bot.send_animation(
+                config.channel_chat_id,
+                animation=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.STICKER:
+            return await bot.send_sticker(
+                config.channel_chat_id,
+                sticker=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+    raise ValueError(f"Unsupported attachment type: {attachment['type']}")
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state="*", commands=["start"])
@@ -78,7 +205,11 @@ async def send_create_ticket(message: Message):
     ],
     state="*",
 )
-async def handle_no_text(message: Message):
+async def handle_no_text(message: Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state == states.Registration.input_text.state:
+        return
+
     await message.answer(
         texts.errors.message_no_text,
         parse_mode=ParseMode.HTML
@@ -399,11 +530,34 @@ async def send_input_text(message: Message):
     await states.Registration.input_text.set()
 
 
-@dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_text)
-async def handle_input_text(message: Message, state: FSMContext):
-    text = escape_swear_words(message.html_text or message.text)
+@dp.message_handler(
+    ChatTypeFilter(ChatType.PRIVATE),
+    state=states.Registration.input_text,
+    content_types=[ContentType.ANY],
+)
+async def handle_input_text(message: Message, state: FSMContext, album: list[Message] | None = None):
+    text = escape_swear_words(
+        message.html_caption or message.html_text or message.caption or message.text or ""
+    )
+
+    if not text:
+        text = "Без текстового описания"
+
+    attachments: list[Attachment] | None = None
+    if message.content_type != ContentType.TEXT:
+        source_messages = album if message.media_group_id and album else [message]
+        attachments = [
+            attachment
+            for msg in source_messages
+            if (attachment := message_to_attachment(msg)) is not None
+        ]
+
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
+        if attachments:
+            data[DATA_ATTACHMENTS_KEY] = attachments
+        else:
+            data.pop(DATA_ATTACHMENTS_KEY, None)
         if not data[DATA_ANONYM_KEY]:
             return await send_choice_approve(message)
     return await send_choice_processing_pd(message)
@@ -442,8 +596,11 @@ async def send_choice_approve(message: Message):
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_approve)
 async def handle_choice_approve(message: Message, state: FSMContext, store: Storage):
     if message.text == texts.buttons.yes:
+        async with state.proxy() as data:
+            attachments: list[Attachment] | None = data.get(DATA_ATTACHMENTS_KEY)
+
         ticket = await save_ticket(message, state, store)
-        content_message_id, meta_message_id = await send_ticket(ticket)
+        content_message_id, meta_message_id = await send_ticket(ticket, attachments)
         await send_ticket_was_sent(message, ticket.id)
         await store.update_ticket(ticket.id, channel_content_message_id=content_message_id, channel_meta_message_id=meta_message_id)
     elif message.text == texts.buttons.no:
@@ -476,18 +633,57 @@ async def save_ticket(message: Message, state: FSMContext, store: Storage) -> Ti
     return await store.save_ticket(ticket)
 
 
-async def send_ticket(ticket: TicketRecord) -> tuple[int, int]:
+async def send_ticket(ticket: TicketRecord, attachments: list[Attachment] | None = None) -> tuple[int, int]:
     content = await bot.send_message(
         config.channel_chat_id,
         texts.ticket.ticket_content_message_channel(ticket),
-        parse_mode=ParseMode.HTML)
+        parse_mode=ParseMode.HTML,
+    )
+
+    if attachments:
+        await send_ticket_attachments(attachments, reply_to=content.message_id)
 
     meta = await bot.send_message(
         config.channel_chat_id,
         texts.ticket.ticket_meta_message_channel(ticket),
-        reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id))
+        reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id),
+    )
 
     return content.message_id, meta.message_id
+
+
+async def send_ticket_attachments(attachments: list[Attachment], reply_to: int | None) -> None:
+    if not attachments:
+        return
+
+    media_group_id = attachments[0]["media_group_id"]
+    supported_media_group_types = {
+        ContentType.PHOTO,
+        ContentType.DOCUMENT,
+        ContentType.VIDEO,
+        ContentType.AUDIO,
+        ContentType.ANIMATION,
+    }
+
+    if (
+        media_group_id
+        and len(attachments) > 1
+        and all(att["media_group_id"] == media_group_id for att in attachments)
+        and all(att["type"] in supported_media_group_types for att in attachments)
+    ):
+        media = [make_input_media(att) for att in attachments]
+        await bot.send_media_group(
+            chat_id=config.channel_chat_id,
+            media=media,
+            reply_to_message_id=reply_to,
+        )
+        return
+
+    for attachment in attachments:
+        try:
+            await send_single_attachment(attachment, reply_to)
+        except ValueError:
+            logger.warning("Skip unsupported attachment type %s", attachment["type"])
 
 
 async def send_ticket_was_sent(message: Message, ticket_id: int):
