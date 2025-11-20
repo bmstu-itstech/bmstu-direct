@@ -26,6 +26,7 @@ from common.repository import dp, bot
 from common.swear_words import escape_swear_words
 from services.db.storage import MessageNotFoundException, Storage
 from core.filters.role import StudentFilter
+from core.handlers.moderator import extract_ticket_id_from_message
 
 from config import config
 
@@ -243,8 +244,16 @@ async def handle_student_answer(message: Message, store: Storage, album: list[Me
             owner_message_id=message.reply_to_message.message_id,
         )
     except MessageNotFoundException:
-        await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
-        return
+        ticket_id = extract_ticket_id_from_message(message.reply_to_message)
+        if ticket_id:
+            try:
+                replied_message = await store.last_ticket_message(ticket_id, chat_id=config.comment_chat_id)
+            except MessageNotFoundException:
+                await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
+                return
+        else:
+            await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
+            return
     answer = extract_message_text(message)
     await send_student_answer(message, store, replied_message, answer, album)
 
