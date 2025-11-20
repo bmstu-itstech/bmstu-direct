@@ -113,6 +113,8 @@ async def send_student_answer(
     album: list[Message] | None,
 ):
     reply_to_id = replied_message.message_id
+    sent: list[Message]
+    album_messages: list[Message] | None = None
     # Если документ
     if message.content_type == ContentType.DOCUMENT:
         if message.media_group_id is None:
@@ -178,15 +180,28 @@ async def send_student_answer(
             )
         ]
 
-    await store.save_message(
-        domain.Message(
-            chat_id=sent[0].chat.id,
-            message_id=sent[0].message_id,
-            owner_message_id=message.message_id,
-            reply_to_message_id=sent[0].reply_to_message.message_id,
-            ticket_id=replied_message.ticket_id,
+    if message.media_group_id and len(sent) > 1:
+        album_messages = album_messages or album or [message]
+        for reply_msg, owner_msg in zip(sent, album_messages):
+            await store.save_message(
+                domain.Message(
+                    chat_id=reply_msg.chat.id,
+                    message_id=reply_msg.message_id,
+                    owner_message_id=owner_msg.message_id,
+                    reply_to_message_id=reply_msg.reply_to_message.message_id if reply_msg.reply_to_message else reply_to_id,
+                    ticket_id=replied_message.ticket_id,
+                )
+            )
+    else:
+        await store.save_message(
+            domain.Message(
+                chat_id=sent[0].chat.id,
+                message_id=sent[0].message_id,
+                owner_message_id=message.message_id,
+                reply_to_message_id=sent[0].reply_to_message.message_id if sent[0].reply_to_message else reply_to_id,
+                ticket_id=replied_message.ticket_id,
+            )
         )
-    )
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.create_ticket, regexp=texts.buttons.create_ticket)
