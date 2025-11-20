@@ -122,6 +122,19 @@ class Storage:
             raise TicketNotFoundException(_id)
         return ticket_id
 
+    async def last_ticket_message(self, ticket_id: int, chat_id: int | None = None) -> domain.Message:
+        stmt = select(models.GroupMessage).filter_by(ticket_id=ticket_id)
+        if chat_id is not None:
+            stmt = stmt.filter_by(chat_id=chat_id)
+
+        result = await self._db.execute(stmt.order_by(models.GroupMessage.created_on.desc()))
+        model = result.scalars().first()
+
+        if not model:
+            raise MessageNotFoundException(ticket_id)
+
+        return model.to_domain()
+
     async def chat_ticket_ids(self, chat_id: int) -> list[int]:
         stmt = \
             select(models.Ticket.id). \
