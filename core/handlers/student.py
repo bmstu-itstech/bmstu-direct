@@ -3,7 +3,19 @@ import re
 
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import ChatTypeFilter, IsReplyFilter
-from aiogram.types import Message, ReplyKeyboardRemove, ParseMode, ChatType, ContentType
+from aiogram.types import (
+    ChatType,
+    ContentType,
+    InputMediaAnimation,
+    InputMediaAudio,
+    InputMediaDocument,
+    InputMediaPhoto,
+    InputMediaVideo,
+    Message,
+    ParseMode,
+    ReplyKeyboardRemove,
+)
+from typing import TypedDict
 
 from core import texts
 from core import states
@@ -12,8 +24,9 @@ from core.domain import TicketRecord, Status
 from core.handlers import keyboards
 from common.repository import dp, bot
 from common.swear_words import escape_swear_words
-from services.db.storage import Storage
+from services.db.storage import MessageNotFoundException, Storage
 from core.filters.role import StudentFilter
+from core.handlers.moderator import extract_ticket_id_from_message
 
 from config import config
 
@@ -26,9 +39,143 @@ DATA_ANONYM_KEY = "is_anonym"
 DATA_FULL_NAME_KEY = "full_name"
 DATA_STUDY_GROUP_KEY = "study_group"
 DATA_TEXT_KEY = "text"
+DATA_ATTACHMENTS_KEY = "attachments"
 
 
 logger = logging.getLogger(__name__)
+
+
+class Attachment(TypedDict):
+    type: ContentType
+    file_id: str
+    media_group_id: str | None
+
+
+def message_to_attachment(message: Message) -> Attachment | None:
+    match message.content_type:
+        case ContentType.PHOTO:
+            file_id = message.photo[-1].file_id
+        case ContentType.DOCUMENT:
+            file_id = message.document.file_id
+        case ContentType.VIDEO:
+            file_id = message.video.file_id
+        case ContentType.AUDIO:
+            file_id = message.audio.file_id
+        case ContentType.VOICE:
+            file_id = message.voice.file_id
+        case ContentType.VIDEO_NOTE:
+            file_id = message.video_note.file_id
+        case ContentType.ANIMATION:
+            file_id = message.animation.file_id
+        case ContentType.STICKER:
+            file_id = message.sticker.file_id
+        case _:
+            return None
+
+    return Attachment(
+        type=message.content_type,
+        file_id=file_id,
+        media_group_id=message.media_group_id,
+    )
+
+
+def extract_message_text(message: Message) -> str:
+    raw_text = (
+        getattr(message, "html_text", None)
+        or getattr(message, "text", None)
+        or getattr(message, "caption", None)
+        or ""
+    )
+
+    return escape_swear_words(raw_text)
+
+
+def make_input_media(attachment: Attachment, caption: str | None = None):
+    match attachment["type"]:
+        case ContentType.PHOTO:
+            return InputMediaPhoto(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.DOCUMENT:
+            return InputMediaDocument(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.VIDEO:
+            return InputMediaVideo(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.AUDIO:
+            return InputMediaAudio(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+        case ContentType.ANIMATION:
+            return InputMediaAnimation(
+                media=attachment["file_id"],
+                caption=caption,
+                parse_mode=ParseMode.HTML if caption else None,
+            )
+    raise ValueError(f"Unsupported media group type: {attachment['type']}")
+
+
+async def send_single_attachment(attachment: Attachment, reply_to: int | None) -> Message:
+    match attachment["type"]:
+        case ContentType.PHOTO:
+            return await bot.send_photo(
+                config.channel_chat_id,
+                photo=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.DOCUMENT:
+            return await bot.send_document(
+                config.channel_chat_id,
+                document=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.VIDEO:
+            return await bot.send_video(
+                config.channel_chat_id,
+                video=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.AUDIO:
+            return await bot.send_audio(
+                config.channel_chat_id,
+                audio=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.VOICE:
+            return await bot.send_voice(
+                config.channel_chat_id,
+                voice=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.VIDEO_NOTE:
+            return await bot.send_video_note(
+                config.channel_chat_id,
+                video_note=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.ANIMATION:
+            return await bot.send_animation(
+                config.channel_chat_id,
+                animation=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+        case ContentType.STICKER:
+            return await bot.send_sticker(
+                config.channel_chat_id,
+                sticker=attachment["file_id"],
+                reply_to_message_id=reply_to,
+            )
+    raise ValueError(f"Unsupported attachment type: {attachment['type']}")
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state="*", commands=["start"])
@@ -51,54 +198,177 @@ async def send_create_ticket(message: Message):
     await states.Registration.create_ticket.set()
 
 
-@dp.message_handler(StudentFilter(), content_types=[
-            ContentType.AUDIO,
-            ContentType.DOCUMENT,
-            ContentType.PHOTO,
-            ContentType.STICKER,
-            ContentType.VIDEO,
-            ContentType.VOICE,
-            ContentType.LOCATION,
-            ContentType.CONTACT,
-            ContentType.POLL,
-            ContentType.DICE,
-            ContentType.VIDEO_NOTE,
-            ContentType.ANIMATION,      # GIF
-        ], state="*")
-async def handle_no_text(message: Message):
+@dp.message_handler(
+    StudentFilter(),
+    IsReplyFilter(is_reply=False),
+    content_types=[
+        ContentType.AUDIO,
+        ContentType.DOCUMENT,
+        ContentType.PHOTO,
+        ContentType.STICKER,
+        ContentType.VIDEO,
+        ContentType.VOICE,
+        ContentType.LOCATION,
+        ContentType.CONTACT,
+        ContentType.POLL,
+        ContentType.DICE,
+        ContentType.VIDEO_NOTE,
+        ContentType.ANIMATION,  # GIF
+    ],
+    state="*",
+)
+async def handle_no_text(
+    message: Message, state: FSMContext, album: list[Message] | None = None
+):
+    current_state = await state.get_state()
+    if current_state == states.Registration.input_text.state:
+        return await handle_input_text(message, state, album)
+
     await message.answer(
         texts.errors.message_no_text,
         parse_mode=ParseMode.HTML
     )
 
 
-@dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), IsReplyFilter(is_reply=True), state="*")
-async def handle_student_answer(message: Message, store: Storage):
+@dp.message_handler(
+    ChatTypeFilter(ChatType.PRIVATE),
+    IsReplyFilter(is_reply=True),
+    state="*",
+    content_types=[ContentType.ANY],
+)
+async def handle_student_answer(message: Message, store: Storage, album: list[Message] | None = None):
     ticket_ids = await store.chat_ticket_ids(message.chat.id)
-    replied_message = await store.message_by_id(
-        ticket_ids=ticket_ids,
-        owner_message_id=message.reply_to_message.message_id,
-    )
-    answer = escape_swear_words(message.text)
-    await send_student_answer(message, store, replied_message, answer)
-
-
-async def send_student_answer(message: Message, store: Storage, replied_message: domain.Message, answer: str):
-    sent = await bot.send_message(
-        config.comment_chat_id,
-        texts.ticket.student_answer(answer),
-        reply_to_message_id=replied_message.message_id,
-        parse_mode=ParseMode.HTML,
-    )
-    await store.save_message(
-        domain.Message(
-            chat_id=sent.chat.id,
-            message_id=sent.message_id,
-            owner_message_id=message.message_id,
-            reply_to_message_id=sent.reply_to_message.message_id,
-            ticket_id=replied_message.ticket_id,
+    try:
+        replied_message = await store.message_by_id(
+            ticket_ids=ticket_ids,
+            owner_message_id=message.reply_to_message.message_id,
         )
-    )
+    except MessageNotFoundException:
+        ticket_id = extract_ticket_id_from_message(message.reply_to_message)
+        if ticket_id:
+            try:
+                replied_message = await store.last_ticket_message(ticket_id, chat_id=config.comment_chat_id)
+            except MessageNotFoundException:
+                await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
+                return
+        else:
+            await message.answer(texts.errors.no_reply, parse_mode=ParseMode.HTML)
+            return
+    answer = extract_message_text(message)
+    await send_student_answer(message, store, replied_message, answer, album)
+
+
+async def send_student_answer(
+    message: Message,
+    store: Storage,
+    replied_message: domain.Message,
+    answer: str,
+    album: list[Message] | None,
+):
+    reply_to_id = replied_message.message_id
+    sent: list[Message]
+    album_messages: list[Message] | None = None
+    # Если документ
+    if message.content_type == ContentType.DOCUMENT:
+        if message.media_group_id is None:
+            file_id = message.document.file_id
+            sent = [
+                await bot.send_document(
+                    config.comment_chat_id,
+                    document=file_id,
+                    reply_to_message_id=reply_to_id,
+                    parse_mode=ParseMode.HTML,
+                    caption=texts.ticket.student_answer(answer),
+                )
+            ]
+        else:
+            media = []
+            album_messages = album or [message]
+            for idx, obj in enumerate(album_messages):
+                media.append(
+                    InputMediaDocument(
+                        media=obj.document.file_id,
+                        caption=texts.ticket.student_answer(answer) if idx == 0 else None,
+                        parse_mode=ParseMode.HTML if idx == 0 else None,
+                    )
+                )
+            sent = await bot.send_media_group(
+                chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
+            )
+    # Если фото
+    elif message.content_type == ContentType.PHOTO:
+        if message.media_group_id is None:
+            file_id = message.photo[-1].file_id
+            sent = [
+                await bot.send_photo(
+                    config.comment_chat_id,
+                    photo=file_id,
+                    reply_to_message_id=reply_to_id,
+                    parse_mode=ParseMode.HTML,
+                    caption=texts.ticket.student_answer(answer),
+                )
+            ]
+        else:
+            media = []
+            album_messages = album or [message]
+            for idx, obj in enumerate(album_messages):
+                media.append(
+                    InputMediaPhoto(
+                        media=obj.photo[-1].file_id,
+                        caption=texts.ticket.student_answer(answer) if idx == 0 else None,
+                        parse_mode=ParseMode.HTML if idx == 0 else None,
+                    )
+                )
+            sent = await bot.send_media_group(
+                chat_id=config.comment_chat_id, media=media, reply_to_message_id=reply_to_id
+            )
+    # Текстовые сообщения
+    elif message.content_type == ContentType.TEXT:
+        sent = [
+            await bot.send_message(
+                config.comment_chat_id,
+                texts.ticket.student_answer(answer),
+                reply_to_message_id=reply_to_id,
+                parse_mode=ParseMode.HTML,
+            )
+        ]
+    # Любые другие типы (видео, аудио и пр.)
+    else:
+        target_album = album or [message]
+        sent = []
+        for idx, obj in enumerate(target_album):
+            caption = texts.ticket.student_answer(answer) if idx == 0 else None
+            sent.append(
+                await obj.copy_to(
+                    config.comment_chat_id,
+                    reply_to_message_id=reply_to_id,
+                    caption=caption,
+                    parse_mode=ParseMode.HTML if caption else None,
+                )
+            )
+
+    if message.media_group_id and len(sent) > 1:
+        album_messages = album_messages or album or [message]
+        for reply_msg, owner_msg in zip(sent, album_messages):
+            await store.save_message(
+                domain.Message(
+                    chat_id=reply_msg.chat.id,
+                    message_id=reply_msg.message_id,
+                    owner_message_id=owner_msg.message_id,
+                    reply_to_message_id=reply_msg.reply_to_message.message_id if reply_msg.reply_to_message else reply_to_id,
+                    ticket_id=replied_message.ticket_id,
+                )
+            )
+    else:
+        await store.save_message(
+            domain.Message(
+                chat_id=sent[0].chat.id,
+                message_id=sent[0].message_id,
+                owner_message_id=message.message_id,
+                reply_to_message_id=sent[0].reply_to_message.message_id if sent[0].reply_to_message else reply_to_id,
+                ticket_id=replied_message.ticket_id,
+            )
+        )
 
 
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.create_ticket, regexp=texts.buttons.create_ticket)
@@ -280,11 +550,32 @@ async def send_input_text(message: Message):
     await states.Registration.input_text.set()
 
 
-@dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.input_text)
-async def handle_input_text(message: Message, state: FSMContext):
-    text = escape_swear_words(message.text)
+@dp.message_handler(
+    ChatTypeFilter(ChatType.PRIVATE),
+    state=states.Registration.input_text,
+    content_types=[ContentType.ANY],
+)
+async def handle_input_text(message: Message, state: FSMContext, album: list[Message] | None = None):
+    text = extract_message_text(message)
+
+    if not text:
+        text = "Без текстового описания"
+
+    attachments: list[Attachment] | None = None
+    if message.content_type != ContentType.TEXT:
+        source_messages = album if message.media_group_id and album else [message]
+        attachments = [
+            attachment
+            for msg in source_messages
+            if (attachment := message_to_attachment(msg)) is not None
+        ]
+
     async with state.proxy() as data:
         data[DATA_TEXT_KEY] = text
+        if attachments:
+            data[DATA_ATTACHMENTS_KEY] = attachments
+        else:
+            data.pop(DATA_ATTACHMENTS_KEY, None)
         if not data[DATA_ANONYM_KEY]:
             return await send_choice_approve(message)
     return await send_choice_processing_pd(message)
@@ -323,8 +614,11 @@ async def send_choice_approve(message: Message):
 @dp.message_handler(ChatTypeFilter(ChatType.PRIVATE), state=states.Registration.choice_approve)
 async def handle_choice_approve(message: Message, state: FSMContext, store: Storage):
     if message.text == texts.buttons.yes:
+        async with state.proxy() as data:
+            attachments: list[Attachment] | None = data.get(DATA_ATTACHMENTS_KEY)
+
         ticket = await save_ticket(message, state, store)
-        content_message_id, meta_message_id = await send_ticket(ticket)
+        content_message_id, meta_message_id = await send_ticket(ticket, attachments)
         await send_ticket_was_sent(message, ticket.id)
         await store.update_ticket(ticket.id, channel_content_message_id=content_message_id, channel_meta_message_id=meta_message_id)
     elif message.text == texts.buttons.no:
@@ -357,18 +651,57 @@ async def save_ticket(message: Message, state: FSMContext, store: Storage) -> Ti
     return await store.save_ticket(ticket)
 
 
-async def send_ticket(ticket: TicketRecord) -> tuple[int, int]:
+async def send_ticket(ticket: TicketRecord, attachments: list[Attachment] | None = None) -> tuple[int, int]:
     content = await bot.send_message(
         config.channel_chat_id,
         texts.ticket.ticket_content_message_channel(ticket),
-        parse_mode=ParseMode.HTML)
+        parse_mode=ParseMode.HTML,
+    )
+
+    if attachments:
+        await send_ticket_attachments(attachments, reply_to=content.message_id)
 
     meta = await bot.send_message(
         config.channel_chat_id,
         texts.ticket.ticket_meta_message_channel(ticket),
-        reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id))
+        reply_markup=keyboards.keyboard_by_status(ticket.status, ticket.id),
+    )
 
     return content.message_id, meta.message_id
+
+
+async def send_ticket_attachments(attachments: list[Attachment], reply_to: int | None) -> None:
+    if not attachments:
+        return
+
+    media_group_id = attachments[0]["media_group_id"]
+    supported_media_group_types = {
+        ContentType.PHOTO,
+        ContentType.DOCUMENT,
+        ContentType.VIDEO,
+        ContentType.AUDIO,
+        ContentType.ANIMATION,
+    }
+
+    if (
+        media_group_id
+        and len(attachments) > 1
+        and all(att["media_group_id"] == media_group_id for att in attachments)
+        and all(att["type"] in supported_media_group_types for att in attachments)
+    ):
+        media = [make_input_media(att) for att in attachments]
+        await bot.send_media_group(
+            chat_id=config.channel_chat_id,
+            media=media,
+            reply_to_message_id=reply_to,
+        )
+        return
+
+    for attachment in attachments:
+        try:
+            await send_single_attachment(attachment, reply_to)
+        except ValueError:
+            logger.warning("Skip unsupported attachment type %s", attachment["type"])
 
 
 async def send_ticket_was_sent(message: Message, ticket_id: int):
