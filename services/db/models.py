@@ -6,17 +6,13 @@ from core import domain
 from services.db.base import Base
 
 
-class BaseModel(Base):
-    __abstract__ = True
-
-    created_on = Column(DateTime, default=datetime.now)
-    updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-
-
-class BannedUser(BaseModel):
+class BannedUser(Base):
     __tablename__ = "banned_users"
 
-    chat_id = Column(BigInteger, primary_key=True)
+    id = Column(BigInteger, Sequence("banned_users_id_seq", start=1, increment=1), primary_key=True)
+    chat_id = Column(BigInteger, nullable=False, unique=True)
+    created_on = Column(DateTime, default=datetime.now)
+    updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     @classmethod
     def from_domain(cls, user: domain.BannedUser) -> "BannedUser":
@@ -26,10 +22,12 @@ class BannedUser(BaseModel):
         return domain.BannedUser(chat_id=self.chat_id)
 
 
-class Ticket(BaseModel):
+class Ticket(Base):
     __tablename__ = 'tickets'
 
-    id = Column(BigInteger, Sequence("id", start=1, increment=1), primary_key=True)
+    id = Column(BigInteger, Sequence("tickets_id_seq", start=1, increment=1), primary_key=True)
+    created_on = Column(DateTime, default=datetime.now)
+    updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     owner_chat_id               = Column(BigInteger,            nullable=False)
     channel_content_message_id  = Column(BigInteger,            nullable=True)
@@ -81,10 +79,12 @@ class Ticket(BaseModel):
         )
 
 
-class GroupMessage(BaseModel):
+class GroupMessage(Base):
     __tablename__ = "group_messages"
 
-    id = Column(BigInteger, Sequence("id", start=1, increment=1), primary_key=True)
+    id = Column(BigInteger, Sequence("group_messages_id_seq", start=1, increment=1), primary_key=True)
+    created_on = Column(DateTime, default=datetime.now)
+    updated_on = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     chat_id             = Column(BigInteger, nullable=True)
     message_id          = Column(BigInteger, nullable=True)
