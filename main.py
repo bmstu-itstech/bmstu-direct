@@ -15,7 +15,7 @@ from core.middlewares.album import AlbumMiddleware
 from services.db.db_pool import create_db_pool
 
 # NOT REMOVE THIS IMPORT!
-from core.handlers import admin, moderator, student
+from core.handlers import admin, moderator, student, errors
 
 
 logger = logging.getLogger(__name__)
