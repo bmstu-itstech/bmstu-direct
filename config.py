@@ -40,5 +40,5 @@ config = Config(
     comment_chat_id=int(env_required("COMMENT_CHAT_ID")),
     swear_words_file=env_with_default("SWEAR_WORDS", "assets/swear_words.txt"),
     logs_dir=env_with_default("LOGS_DIR", "./logs"),
-    db_uri=env_with_default("DATABASE_URI", "postgresql+asyncpg://postgres:postgres@localhost:5432/postgres?sslmode=disable"),
+    db_uri=env_required("DATABASE_URI"),
 )
