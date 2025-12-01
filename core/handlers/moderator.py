@@ -202,7 +202,12 @@ def extract_ticket_id_from_message(message: Message) -> int | None:
 
 def extract_message_html(message: Message) -> str | None:
     for field in ("html_text", "html_caption", "text", "caption"):
-        value = getattr(message, field, None)
+        try:
+            value = getattr(message, field, None)
+        except TypeError:
+            # aiogram can raise TypeError for html_* properties when message has no text
+            continue
+
         if value:
             return html.unescape(value)
     return None
