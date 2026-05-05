@@ -8,3 +8,5 @@ services:
       CHANNEL_CHAT_ID: $CHANNEL_CHAT_ID
       DATABASE_URI: $DATABASE_URI
       TELEGRAM_BOT_TOKEN: $TELEGRAM_BOT_TOKEN
+      PROXY_URL: ${PROXY_URL:-}
+    restart: unless-stopped

@@ -21,13 +21,14 @@ jobs:
           CHANNEL_CHAT_ID: ${{ vars.CHANNEL_CHAT_ID }}
           DATABASE_URI: ${{ secrets.DATABASE_URI }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          PROXY_URL: ${{ secrets.PROXY_URL }}
         with:
           host: ${{ vars.SSH_HOST }}
           port: ${{ vars.SSH_PORT }}
           username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script_stop: true
-          envs: ADMIN_IDS, COMMENT_CHAT_ID, CHANNEL_CHAT_ID, DATABASE_URI, TELEGRAM_BOT_TOKEN
+          envs: ADMIN_IDS, COMMENT_CHAT_ID, CHANNEL_CHAT_ID, DATABASE_URI, TELEGRAM_BOT_TOKEN, PROXY_URL
           script: |
             cd ${{ vars.PROJECT_DIR }}
             git stash

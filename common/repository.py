@@ -5,6 +5,6 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from config import config
 
 
-bot = Bot(token=config.telegram_bot_token)
+bot = Bot(token=config.telegram_bot_token, proxy=config.proxy_url)
 dp = Dispatcher(bot, storage=MemoryStorage())
 compiler = Compiler()

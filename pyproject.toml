@@ -18,6 +18,7 @@ python-dotenv = "^1.0.1"
 asyncpg = "^0.30.0"
 pybars3 = "^0.9.7"
 cachetools = "^5.5.2"
+aiohttp-socks = "^0.11.0"
 
 
 [build-system]
