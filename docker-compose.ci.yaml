@@ -1,7 +1,9 @@
 services:
   bot:
     container_name: direct-bot
-    build: .
+    build:
+      context: .
+      target: development
     environment:
       ADMIN_IDS: ${ADMIN_IDS:-}
       COMMENT_CHAT_ID: $COMMENT_CHAT_ID

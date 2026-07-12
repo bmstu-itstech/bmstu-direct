@@ -3,17 +3,18 @@ services:
     container_name: direct-bot
     build:
       context: .
-      dockerfile: Dockerfile
-      network: host
+      target: development
     env_file:
       - .env
     environment:
       DATABASE_URI: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
     networks:
-      - host
+      - internal
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - .:/code
 
   db:
     image: postgres:16.3-alpine3.20
@@ -29,10 +30,10 @@ services:
       start_period: 10s
       timeout: 10s
     networks:
-      - host
+      - internal
     volumes:
       - ${POSTGRES_VOLUME:-./.volume}:/var/lib/postgresql/data
 
 networks:
-  host:
+  internal:
     driver: bridge

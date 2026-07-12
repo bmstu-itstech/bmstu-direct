@@ -1,4 +1,3 @@
-import os
 import asyncio
 import logging
 
@@ -34,7 +33,6 @@ async def main():
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         encoding="UTF-8",
         handlers=[
-            #logging.FileHandler(os.path.join(config.logs_dir, "bot.log")),
             logging.StreamHandler()
         ]
     )

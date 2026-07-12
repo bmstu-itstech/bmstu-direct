@@ -1,26 +1,32 @@
-[tool.poetry]
+[project]
 name = "bmstu-direct"
-version = "1.0.1"
 description = "Сервис для создания обращений в администрацию МГТУ им. Н.Э. Баумана"
+version = "1.1.0"
+requires-python = ">=3.13"
+readme = "README.md"
 authors = [
     "zhikh <zhikh.k@gmail.com>",
     "acruxtech <acrux_tech@mail.ru>",
     "Tr1zel <96981657+Tr1zel@users.noreply.github.com>"
 ]
+classifiers = [
+  "Private :: Do not Upload",
+]
 license = "MIT license"
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-aiogram = "2.15"
-sqlalchemy = "^2.0.36"
-python-dotenv = "^1.0.1"
-asyncpg = "^0.30.0"
-pybars3 = "^0.9.7"
-cachetools = "^5.5.2"
-aiohttp-socks = "^0.11.0"
-
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+dependencies = [
+    "aiogram~=2.15",
+    "aiohttp-socks>=0.11.0",
+    "asyncpg>=0.31.0",
+    "cachetools>=7.1.4",
+    "pybars3>=0.9.7",
+    "python-dotenv>=1.2.2",
+    "sqlalchemy>=2.0.51",
+]
+#python = "^3.10"
+#aiogram = "2.15"
+#sqlalchemy = "^2.0.36"
+#python-dotenv = "^1.0.1"
+#asyncpg = "^0.30.0"
+#pybars3 = "^0.9.7"
+#cachetools = "^5.5.2"
+#aiohttp-socks = "^0.11.0"
