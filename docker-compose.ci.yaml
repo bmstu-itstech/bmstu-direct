@@ -3,7 +3,7 @@ services:
     container_name: direct-bot
     build:
       context: .
-      target: development
+      target: production
     environment:
       ADMIN_IDS: ${ADMIN_IDS:-}
       COMMENT_CHAT_ID: $COMMENT_CHAT_ID
